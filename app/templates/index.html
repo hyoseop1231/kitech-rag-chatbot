@@ -849,20 +849,20 @@
                     const processedText = filteredText;
                     // 코드 블록 경계 감지 (불완전한 코드 블록 처리)
                     const codeBlockPattern = /```[\s\S]*?```/g;
-                    const incompleteCodeBlockPattern = /```[\s\S]*$/;
                     
-                    // 불완전한 코드 블록이 있는지 확인
-                    const hasIncompleteCodeBlock = incompleteCodeBlockPattern.test(processedText);
+                    // 더 정확한 불완전 코드 블록 감지: 마지막 ```가 열린 상태인지 확인
+                    const allCodeBlockMarkers = processedText.match(/```/g) || [];
+                    const hasIncompleteCodeBlock = allCodeBlockMarkers.length > 0 && allCodeBlockMarkers.length % 2 === 1;
                     
                     let textToRender = processedText;
                     let incompleteContent = '';
                     
                     if (hasIncompleteCodeBlock) {
-                        // 불완전한 코드 블록을 분리
-                        const match = processedText.match(/^([\s\S]*?)(```[\s\S]*)$/);
-                        if (match) {
-                            textToRender = match[1]; // 완성된 부분
-                            incompleteContent = match[2]; // 불완전한 코드 블록
+                        // 마지막 열린 코드 블록을 찾아 분리
+                        const lastCodeBlockIndex = processedText.lastIndexOf('```');
+                        if (lastCodeBlockIndex !== -1) {
+                            textToRender = processedText.substring(0, lastCodeBlockIndex).trim();
+                            incompleteContent = processedText.substring(lastCodeBlockIndex); // 불완전한 코드 블록
                         }
                     } else {
                         // 마지막 줄은 아직 작성 중일 수 있으므로 분리
