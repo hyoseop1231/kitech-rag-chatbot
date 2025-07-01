@@ -51,11 +51,17 @@ async def add_security_headers(request: Request, call_next):
     )
     return response
 
-# Trust only specific hosts in production
-if not settings.DEBUG:
+# Trust hosts based on external access settings
+if not settings.DEBUG and not settings.ENABLE_EXTERNAL_ACCESS:
     app.add_middleware(
         TrustedHostMiddleware, 
         allowed_hosts=["localhost", "127.0.0.1", settings.HOST]
+    )
+elif settings.ENABLE_EXTERNAL_ACCESS:
+    # External access enabled - allow more hosts but still maintain some security
+    app.add_middleware(
+        TrustedHostMiddleware, 
+        allowed_hosts=settings.ALLOWED_HOSTS
     )
 
 # Mount static files directory (for CSS, JS)

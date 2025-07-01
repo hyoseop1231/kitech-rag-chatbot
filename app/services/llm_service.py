@@ -13,8 +13,9 @@ def construct_multimodal_rag_prompt(
     image_descriptions: List[str],
     table_contents: List[str],
     lang: str = "ko",
-    conversation_history: List[Dict[str, str]] = None
-) -> str:
+    conversation_history: List[Dict[str, str]] = None,
+    model_name: Optional[str] = None
+) -> tuple[str, bool]:
     """
     Construct a multimodal RAG prompt combining text, images, and tables.
     
@@ -24,10 +25,15 @@ def construct_multimodal_rag_prompt(
         image_descriptions: List of image descriptions
         table_contents: List of table contents
         lang: Language code (default: "ko")
+        conversation_history: List of previous conversation turns
+        model_name: Name of the model to use (for model-specific prompts)
     
     Returns:
-        str: Constructed prompt for LLM
+        tuple[str, bool]: Constructed prompt for LLM and a boolean indicating if it's a reasoning model
     """
+    # Check if the model is a reasoning model
+    is_reasoning_model = model_name and any(kw in model_name.lower() for kw in ['reasoning', 'qwen', 'deepseek', 'qwq'])
+
     if lang == "ko":
         prompt_parts = []
         
@@ -107,13 +113,6 @@ def construct_multimodal_rag_prompt(
             "   1. ✅ 1단계: 준비작업",
             "   2. ⚙️ 2단계: 실행과정", 
             "   3. 🔍 3단계: 검증단계",
-            "   ```",
-            "",
-            "   📈 **개념도/다이어그램**: 관계나 구조 설명 시 ASCII 아트나 도식화",
-            "   ```",
-            "   원료 → [용해] → [정제] → [주입] → [응고] → 완성품",
-            "     ↓      ↓       ↓       ↓       ↓",
-            "   온도체크  성분조정  속도제어  압력관리  품질검사",
             "   ```",
             "",
             "   💡 **박스 형태 정보**: 팁, 주의사항, 요약 등은 박스로 구분",
@@ -221,13 +220,6 @@ def construct_multimodal_rag_prompt(
             "   3. 🔍 Step 3: Verification",
             "   ```",
             "",
-            "   📈 **Concept Diagrams**: Use ASCII art or flowcharts for relationships and structures",
-            "   ```",
-            "   Raw Material → [Melting] → [Refining] → [Pouring] → [Solidification] → Final Product",
-            "        ↓           ↓          ↓          ↓             ↓",
-            "   Temp Check   Composition  Speed Control  Pressure Mgmt  Quality Test",
-            "   ```",
-            "",
             "   💡 **Information Boxes**: Use boxes for tips, warnings, and summaries",
             "   ```",
             "   > 💡 **Expert Tip**",
@@ -254,7 +246,7 @@ def construct_multimodal_rag_prompt(
             "Answer:"
         ])
     
-    return "\n".join(prompt_parts)
+    return "\n".join(prompt_parts), is_reasoning_model
 
 def get_llm_response_stream(prompt: str, model_name: str = None, options: Dict = None) -> Generator[str, None, None]:
     """

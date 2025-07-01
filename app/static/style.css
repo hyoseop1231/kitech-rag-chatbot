@@ -381,7 +381,7 @@ button:hover {
 #chat-history {
     border: 2px solid #e9ecef;
     padding: 20px;
-    height: 500px;
+    height: 800px;
     min-height: 300px;
     overflow-y: auto;
     background-color: #fff;
@@ -587,6 +587,11 @@ button:hover {
     
     .message {
         max-width: 95%;
+    }
+
+    #chat-history {
+        height: 800px;
+        min-height: 60vh;
     }
     
     /* 시스템 대시보드 반응형 */
@@ -2096,18 +2101,6 @@ button:hover {
     position: relative;
 }
 
-.bot-message pre::before {
-    content: "📋 다이어그램";
-    position: absolute;
-    top: -12px;
-    left: 15px;
-    background: #667eea;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
 
 .bot-message code {
     background: #f1f3f4;

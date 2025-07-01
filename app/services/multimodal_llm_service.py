@@ -35,14 +35,20 @@ def process_multimodal_llm_chat_request(
     table_contents = [table.get("content", "") for table in tables]
 
     # Construct the multimodal prompt
-    prompt = construct_multimodal_rag_prompt(
+    prompt, is_reasoning_model = construct_multimodal_rag_prompt(
         user_query,
         context_chunks,
         image_descriptions,
         table_contents,
         lang,
-        conversation_history
+        conversation_history,
+        model_name
     )
+
+    # Add think-step-by-step for non-reasoning models
+    if not is_reasoning_model:
+        prompt = f"Think step-by-step.\n{prompt}"
+
 
     # Query the LLM with custom options (non-streaming)
     response = get_llm_response(prompt, model_name=model_name, options=options, stream=False)

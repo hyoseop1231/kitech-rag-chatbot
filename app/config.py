@@ -28,7 +28,7 @@ class Settings:
     
     # Ollama LLM settings
     OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/generate")
-    OLLAMA_DEFAULT_MODEL: str = os.getenv("OLLAMA_DEFAULT_MODEL", "gemma3:27b-it-qat")
+    OLLAMA_DEFAULT_MODEL: str = os.getenv("OLLAMA_DEFAULT_MODEL", "qwen3:30b-a3b")
     OLLAMA_TIMEOUT: int = int(os.getenv("OLLAMA_TIMEOUT", "120"))
     LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.5"))
     LLM_NUM_PREDICT_TEXT: int = int(os.getenv("LLM_NUM_PREDICT_TEXT", "2048"))
@@ -56,6 +56,10 @@ class Settings:
     # Streaming settings
     ENABLE_STREAMING: bool = os.getenv("ENABLE_STREAMING", "True").lower() == "true"
     
+    # External access settings
+    ENABLE_EXTERNAL_ACCESS: bool = os.getenv("ENABLE_EXTERNAL_ACCESS", "True").lower() == "true"
+    ENABLE_WEB_SEARCH: bool = os.getenv("ENABLE_WEB_SEARCH", "True").lower() == "true"
+    
     # Performance optimization settings
     OCR_MAX_WORKERS: int = int(os.getenv("OCR_MAX_WORKERS", "8"))
     OCR_BATCH_SIZE: int = int(os.getenv("OCR_BATCH_SIZE", "4"))
@@ -71,6 +75,7 @@ class Settings:
     # Security settings
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     CORS_ORIGINS: list = os.getenv("CORS_ORIGINS", "http://localhost:8000").split(",")
+    ALLOWED_HOSTS: list = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,*").split(",")
     
     # Logging settings
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
