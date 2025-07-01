@@ -1829,8 +1829,12 @@
                     typingCursors.forEach(cursor => cursor.remove());
                     
                     // 참고문헌이 제대로 렌더링되었는지 확인만 수행
-                    const referenceExists = messageContent.querySelector('details[style*="참조 문헌"], summary:contains("참조 문헌")');
-                    if (referenceExists) {
+                    const referenceDetails = messageContent.querySelector('details');
+                    const hasReferences = referenceDetails && (
+                        referenceDetails.innerHTML.includes('참조 문헌') || 
+                        referenceDetails.innerHTML.includes('📚')
+                    );
+                    if (hasReferences) {
                         console.log('참고문헌 정상 렌더링 확인됨');
                     } else {
                         console.log('참고문헌 없음 또는 렌더링 문제 없음');
