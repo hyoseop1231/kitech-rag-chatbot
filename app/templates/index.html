@@ -93,6 +93,11 @@
                         <input type="checkbox" id="auto-refresh-toggle" checked style="margin: 0;">
                         <span>🔄 자동새로고침</span>
                     </label>
+                    <label style="display: flex; align-items: center; gap: 5px; margin: 0; font-size: 0.9em; cursor: pointer;">
+                        <input type="checkbox" id="external-access-toggle" checked style="margin: 0;">
+                        <span>🌐 외부접속</span>
+                        <span id="external-access-badge" style="font-size: 0.7em; color: #28a745; margin-left: 5px; background: rgba(40, 167, 69, 0.1); padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(40, 167, 69, 0.3);" title="외부 API/웹 검색 허용됨">🟢 활성</span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -545,62 +550,464 @@
             });
         }
 
-        // 실시간 마크다운 렌더링 함수
-        function renderStreamingMarkdown(messageElement, fullText) {
+        // THINK 블록 스타일링 함수 - 추론 모델의 사고 과정을 차별화해서 표시
+        function styleThinkBlocks(text) {
+            try {
+                let processed = text;
+                
+                // 추론 블록 패턴들과 해당 스타일 처리
+                const thinkPatterns = [
+                    // <think> 태그 형태 - QwQ 모델 형식 (소문자)
+                    {
+                        pattern: /<think>([\s\S]*?)<\/think>/gim,
+                        replacement: (match, content) => `
+<div class="thinking-section" style="
+    margin: 12px 0;
+    padding: 12px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid #6c757d;
+    border-radius: 8px;
+    font-size: 0.85em;
+    color: #495057;
+    font-style: italic;
+    opacity: 0.85;
+">
+    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-weight: 600; color: #6c757d;">
+        🧠 <span>Thinking...</span>
+    </div>
+    <div style="white-space: pre-wrap; line-height: 1.4;">${content.trim()}</div>
+</div>`
+                    },
+                    // <THINK> 태그 형태 - 대문자 버전 (호환성)
+                    {
+                        pattern: /<THINK>([\s\S]*?)<\/THINK>/gim,
+                        replacement: (match, content) => `
+<div class="thinking-section" style="
+    margin: 12px 0;
+    padding: 12px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid #6c757d;
+    border-radius: 8px;
+    font-size: 0.85em;
+    color: #495057;
+    font-style: italic;
+    opacity: 0.85;
+">
+    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-weight: 600; color: #6c757d;">
+        🧠 <span>Thinking...</span>
+    </div>
+    <div style="white-space: pre-wrap; line-height: 1.4;">${content.trim()}</div>
+</div>`
+                    },
+                    // THINK: 한줄 패턴
+                    {
+                        pattern: /^THINK:\s*(.+)$/gm,
+                        replacement: (match, content) => `
+<div class="thinking-line" style="
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: rgba(108, 117, 125, 0.1);
+    border-radius: 6px;
+    font-size: 0.8em;
+    color: #6c757d;
+    font-style: italic;
+    border-left: 2px solid #6c757d;
+">
+    💭 ${content.trim()}
+</div>`
+                    },
+                    // 멀티라인 THINK 블록
+                    {
+                        pattern: /THINK:\s*([\s\S]*?)(?=\n\n[A-Z가-힣]|\n\d+\.|\n-|\n\*|\n#|$)/gim,
+                        replacement: (match, content) => `
+<div class="thinking-section" style="
+    margin: 12px 0;
+    padding: 12px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid #6c757d;
+    border-radius: 8px;
+    font-size: 0.85em;
+    color: #495057;
+    font-style: italic;
+    opacity: 0.85;
+">
+    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-weight: 600; color: #6c757d;">
+        🧠 <span>Thinking...</span>
+    </div>
+    <div style="white-space: pre-wrap; line-height: 1.4;">${content.trim()}</div>
+</div>`
+                    }
+                ];
+                
+                // 각 패턴에 대해 스타일링 적용
+                thinkPatterns.forEach(({ pattern, replacement }) => {
+                    processed = processed.replace(pattern, replacement);
+                });
+                
+                // 한국어 추론 패턴들을 간단한 스타일로 처리
+                const koreanThinkPatterns = [
+                    /^생각:\s*(.+)$/gm,
+                    /^분석:\s*(.+)$/gm,
+                    /^추론:\s*(.+)$/gm
+                ];
+                
+                koreanThinkPatterns.forEach(pattern => {
+                    processed = processed.replace(pattern, (match, content) => `
+<div class="thinking-line" style="
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: rgba(108, 117, 125, 0.1);
+    border-radius: 6px;
+    font-size: 0.8em;
+    color: #6c757d;
+    font-style: italic;
+    border-left: 2px solid #6c757d;
+">
+    💭 ${content.trim()}
+</div>`);
+                });
+                
+                // 연속된 빈 줄 정리
+                processed = processed.replace(/\n{3,}/g, '\n\n').trim();
+                
+                return processed;
+            } catch (error) {
+                console.warn('THINK block styling failed:', error);
+                return text; // 실패 시 원본 텍스트 반환
+            }
+        }
+
+        // 안정적인 실시간 THINK 블록 렌더링 함수
+        function renderStreamingWithThinkBlocks(messageElement, fullText) {
             if (!window.marked) {
-                // marked 라이브러리가 없으면 텍스트로만 표시
                 messageElement.textContent = fullText;
                 return;
             }
 
             try {
-                // 줄 단위로 분리
-                const lines = fullText.split('\n');
-                const completedLines = lines.slice(0, -1); // 마지막 줄 제외 (아직 작성 중일 수 있음)
-                const currentLine = lines[lines.length - 1]; // 현재 작성 중인 줄
+                // 메시지 요소에 처리된 THINK 블록 기록 저장
+                if (!messageElement.processedThinkBlocks) {
+                    messageElement.processedThinkBlocks = new Set();
+                }
+                if (!messageElement.isAnswerStarted) {
+                    messageElement.isAnswerStarted = false;
+                }
+                
+                // 참고문헌은 스트리밍 완료 후 후처리됨
 
-                // 완성된 줄들을 마크다운으로 렌더링
-                let renderedHTML = '';
-                if (completedLines.length > 0) {
-                    const completedText = completedLines.join('\n');
-                    if (completedText.trim()) {
-                        renderedHTML = window.marked.parse(completedText);
+                let processedHTML = '';
+                let remainingText = fullText;
+                
+                // 완성된 <think> 블록들을 순차적으로 처리
+                const completedThinkMatches = fullText.match(/<think>[\s\S]*?<\/think>/gi) || [];
+                
+                completedThinkMatches.forEach((match, index) => {
+                    const content = match.replace(/<\/?think>/gi, '').trim();
+                    const thinkId = `think-block-${index}`;
+                    
+                    // 이미 처리된 THINK 블록인지 확인
+                    if (!messageElement.processedThinkBlocks.has(thinkId)) {
+                        // 답변이 시작되었는지에 따라 open 속성 결정
+                        const isOpen = !messageElement.isAnswerStarted;
+                        const openAttr = isOpen ? 'open' : '';
+                        const statusText = messageElement.isAnswerStarted ? '(답변 완료됨)' : '(완료)';
                         
-                        // 불완전한 HTML 태그 정리 (마크다운 파싱 오류 방지)
-                        renderedHTML = cleanIncompleteHTML(renderedHTML);
-                        
-                        // 마크다운 후처리 적용
-                        renderedHTML = enhanceMarkdownRendering(renderedHTML);
+                        // 새로운 완성된 THINK 블록 생성
+                        const thinkHTML = `
+<details class="thinking-accordion" id="${thinkId}" ${openAttr} style="
+    margin: 12px 0;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #f8f9fa;
+">
+    <summary style="
+        cursor: pointer;
+        padding: 12px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 7px;
+        font-weight: 600;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        user-select: none;
+    ">
+        💭 <span>thinking process</span>
+        <span style="font-size: 0.8em; margin-left: auto; opacity: 0.7;">${statusText}</span>
+    </summary>
+    <div style="
+        padding: 12px;
+        font-size: 0.85em;
+        color: #495057;
+        font-style: italic;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        border-top: 1px solid #dee2e6;
+        background: #ffffff;
+    ">${escapeHtml(content)}</div>
+</details>`;
+                        processedHTML += thinkHTML;
+                        messageElement.processedThinkBlocks.add(thinkId);
+                    } else {
+                        // 이미 처리된 블록은 기존 DOM에서 가져옴
+                        const existingBlock = messageElement.querySelector(`#${thinkId}`);
+                        if (existingBlock) {
+                            processedHTML += existingBlock.outerHTML;
+                        }
                     }
+                    
+                    // 처리된 THINK 블록을 텍스트에서 제거
+                    remainingText = remainingText.replace(match, '');
+                });
+
+                // 진행 중인 THINK 블록 처리 (완성되지 않은 것)
+                const incompleteThinkMatch = remainingText.match(/<think>[\s\S]*?$/i);
+                if (incompleteThinkMatch) {
+                    const incompleteContent = incompleteThinkMatch[0].replace(/<think>/i, '').trim();
+                    processedHTML += `
+<div class="thinking-section streaming" style="
+    margin: 12px 0;
+    padding: 12px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid #6c757d;
+    border-radius: 8px;
+    font-size: 0.85em;
+    color: #495057;
+    font-style: italic;
+    opacity: 0.85;
+">
+    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-weight: 600; color: #6c757d;">
+        💭 <span>thinking...</span>
+        <span class="typing-cursor">▎</span>
+    </div>
+    <div style="white-space: pre-wrap; line-height: 1.4;">${escapeHtml(incompleteContent)}</div>
+</div>`;
+                    // 진행 중인 THINK 블록도 텍스트에서 제거
+                    remainingText = remainingText.replace(incompleteThinkMatch[0], '');
                 }
 
-                // 현재 작성 중인 줄을 텍스트로 추가
-                let currentLineHTML = '';
-                if (currentLine) {
-                    // 현재 줄이 마크다운 구문을 포함하고 있다면 부분 렌더링 시도
-                    if (currentLine.includes('**') || currentLine.includes('*') || 
-                        currentLine.includes('`') || currentLine.includes('#')) {
-                        try {
-                            currentLineHTML = window.marked.parse(currentLine);
-                            currentLineHTML = cleanIncompleteHTML(currentLineHTML);
-                        } catch (e) {
-                            // 파싱 실패시 텍스트로 표시
-                            currentLineHTML = `<p>${escapeHtml(currentLine)}<span class="typing-cursor">▎</span></p>`;
+                // 실제 답변이 시작되었는지 확인
+                const cleanAnswer = remainingText.trim();
+                if (cleanAnswer.length > 30 && !messageElement.isAnswerStarted) {
+                    messageElement.isAnswerStarted = true;
+                    console.log('답변 시작됨 - THINK 블록 접기 시작');
+                }
+                
+                // 일반 답변 텍스트 처리 (참고문헌은 스트리밍 완료 후 후처리됨)
+                let answerHTML = '';
+                if (cleanAnswer) {
+                    // 불완전한 HTML 태그들 필터링 (참고문헌 조각들 제거)
+                    let filteredText = cleanAnswer;
+                    
+                    // 단독으로 나타나는 HTML 태그들 제거 (줄 전체가 태그인 경우)
+                    filteredText = filteredText.replace(/^\s*<\/?(?:details|summary|div|span)[^>]*>\s*$/gm, '');
+                    
+                    // 공백만 남은 줄들 제거
+                    filteredText = filteredText.replace(/^\s*$/gm, '').trim();
+                    
+                    // 필터링 후 빈 내용이면 스킵
+                    if (!filteredText) {
+                        return;
+                    }
+                    
+                    // 필터링된 텍스트로 계속 처리
+                    const processedText = filteredText;
+                    // 코드 블록 경계 감지 (불완전한 코드 블록 처리)
+                    const codeBlockPattern = /```[\s\S]*?```/g;
+                    const incompleteCodeBlockPattern = /```[\s\S]*$/;
+                    
+                    // 불완전한 코드 블록이 있는지 확인
+                    const hasIncompleteCodeBlock = incompleteCodeBlockPattern.test(processedText);
+                    
+                    let textToRender = processedText;
+                    let incompleteContent = '';
+                    
+                    if (hasIncompleteCodeBlock) {
+                        // 불완전한 코드 블록을 분리
+                        const match = processedText.match(/^([\s\S]*?)(```[\s\S]*)$/);
+                        if (match) {
+                            textToRender = match[1]; // 완성된 부분
+                            incompleteContent = match[2]; // 불완전한 코드 블록
                         }
                     } else {
-                        // 일반 텍스트는 그대로 표시하고 커서 추가
-                        currentLineHTML = `<p>${escapeHtml(currentLine)}<span class="typing-cursor">▎</span></p>`;
+                        // 마지막 줄은 아직 작성 중일 수 있으므로 분리
+                        const answerLines = processedText.split('\n');
+                        if (answerLines.length > 1) {
+                            const completedAnswerLines = answerLines.slice(0, -1);
+                            const currentAnswerLine = answerLines[answerLines.length - 1];
+                            
+                            textToRender = completedAnswerLines.join('\n');
+                            incompleteContent = currentAnswerLine;
+                        }
+                    }
+
+                    // 완성된 부분 렌더링
+                    if (textToRender && textToRender.trim()) {
+                        try {
+                            answerHTML = window.marked.parse(textToRender);
+                            answerHTML = cleanIncompleteHTML(answerHTML);
+                            answerHTML = enhanceMarkdownRendering(answerHTML);
+                        } catch (e) {
+                            console.warn('Markdown parsing failed for completed text:', e);
+                            answerHTML = `<p>${escapeHtml(textToRender)}</p>`;
+                        }
+                    }
+
+                    // 불완전한 부분 처리 (코드 블록이거나 현재 줄)
+                    if (incompleteContent && incompleteContent.trim()) {
+                        if (hasIncompleteCodeBlock) {
+                            // 불완전한 코드 블록을 스타일링된 프리뷰로 표시
+                            const content = incompleteContent.replace(/^```\w*\n?/, '').trim();
+                            answerHTML += `
+<pre style="
+    background-color: #f8f9fa; 
+    padding: 1rem; 
+    border-radius: 4px; 
+    overflow-x: auto; 
+    border-left: 4px solid #007bff;
+    position: relative;
+    border: 1px dashed #dee2e6;
+"><code>${escapeHtml(content)}<span class="typing-cursor">▎</span></code>
+<div style="
+    position: absolute; 
+    top: 5px; 
+    right: 10px; 
+    font-size: 0.8em; 
+    color: #6c757d; 
+    background: rgba(255,255,255,0.8); 
+    padding: 2px 6px; 
+    border-radius: 3px;
+">작성 중...</div>
+</pre>`;
+                        } else {
+                            // 일반 텍스트 줄 처리
+                            if (incompleteContent.includes('**') || incompleteContent.includes('*') || 
+                                incompleteContent.includes('`') || incompleteContent.includes('#')) {
+                                try {
+                                    let currentLineHTML = window.marked.parse(incompleteContent);
+                                    currentLineHTML = cleanIncompleteHTML(currentLineHTML);
+                                    answerHTML += currentLineHTML.replace('</p>', '<span class="typing-cursor">▎</span></p>');
+                                } catch (e) {
+                                    answerHTML += `<p>${escapeHtml(incompleteContent)}<span class="typing-cursor">▎</span></p>`;
+                                }
+                            } else {
+                                answerHTML += `<p>${escapeHtml(incompleteContent)}<span class="typing-cursor">▎</span></p>`;
+                            }
+                        }
                     }
                 }
 
                 // 최종 HTML 설정
-                messageElement.innerHTML = renderedHTML + currentLineHTML;
+                messageElement.innerHTML = processedHTML + answerHTML;
+                
+                // DOM 업데이트 후 THINK 블록 이벤트 설정 (항상 실행)
+                setTimeout(() => {
+                    const allAccordions = messageElement.querySelectorAll('.thinking-accordion');
+                    allAccordions.forEach(accordion => {
+                        setupThinkBlockToggle(accordion);
+                        
+                        // 답변이 시작되었으면 접힘 상태 보장
+                        if (messageElement.isAnswerStarted) {
+                            accordion.removeAttribute('open');
+                            accordion.open = false;
+                        }
+                    });
+                }, 10);
 
             } catch (error) {
                 console.warn('Markdown rendering error during streaming:', error);
                 // 오류 시 텍스트로 fallback
                 messageElement.textContent = fullText + '▎';
             }
+        }
+
+        // THINK 블록 접힘 관리 함수
+        function collapseThinkBlocks(messageElement) {
+            const allAccordions = messageElement.querySelectorAll('.thinking-accordion');
+            allAccordions.forEach(accordion => {
+                // open 속성과 property 모두 제거하여 접기
+                accordion.removeAttribute('open');
+                accordion.open = false;
+                
+                // 상태 텍스트 업데이트
+                const statusSpan = accordion.querySelector('summary span:last-child');
+                if (statusSpan && !statusSpan.textContent.includes('답변 완료됨')) {
+                    statusSpan.textContent = '(답변 완료됨)';
+                }
+                
+                // 수동 토글 이벤트 리스너 추가 (중복 방지)
+                setupThinkBlockToggle(accordion);
+            });
+        }
+
+        // THINK 블록 토글 이벤트 설정
+        function setupThinkBlockToggle(accordion) {
+            const summary = accordion.querySelector('summary');
+            if (summary && !summary.hasAttribute('data-event-attached')) {
+                summary.setAttribute('data-event-attached', 'true');
+                
+                // 기본 동작 방지하고 수동 제어
+                summary.addEventListener('click', function(e) {
+                    e.preventDefault(); // 기본 details 동작 방지
+                    e.stopPropagation(); // 이벤트 전파 방지
+                    
+                    // 답변 완료 후에는 토글 허용
+                    const statusSpan = accordion.querySelector('summary span:last-child');
+                    const isCompleted = statusSpan && (
+                        statusSpan.textContent.includes('완료') || 
+                        statusSpan.textContent.includes('답변 완료됨')
+                    );
+                    
+                    if (isCompleted) {
+                        // 수동 토글 (DOM 조작으로 직접 제어)
+                        const isCurrentlyOpen = accordion.hasAttribute('open') || accordion.open;
+                        
+                        if (isCurrentlyOpen) {
+                            accordion.removeAttribute('open');
+                            accordion.open = false;
+                            console.log('THINK 블록이 수동으로 접혀짐');
+                        } else {
+                            accordion.setAttribute('open', '');
+                            accordion.open = true;
+                            console.log('THINK 블록이 수동으로 펼쳐짐');
+                        }
+                    } else {
+                        console.log('THINK 블록이 아직 완료되지 않음 - 토글 불가');
+                    }
+                });
+            }
+        }
+
+        // 답변 완료 후 THINK 블록 최종 상태 설정
+        function finalizeThinkBlocks(messageElement) {
+            const allAccordions = messageElement.querySelectorAll('.thinking-accordion');
+            allAccordions.forEach(accordion => {
+                // 최종 접힘 상태로 고정 (DOM property와 attribute 모두 설정)
+                accordion.removeAttribute('open');
+                accordion.open = false;
+                
+                // 토글 이벤트 설정 (아직 설정되지 않았다면)
+                setupThinkBlockToggle(accordion);
+                
+                // 최종 상태 텍스트로 업데이트
+                const statusSpan = accordion.querySelector('summary span:last-child');
+                if (statusSpan) {
+                    statusSpan.textContent = '(완료)';
+                    statusSpan.style.color = '#28a745';
+                }
+                
+                // summary 스타일 업데이트 (완료 상태)
+                const summary = accordion.querySelector('summary');
+                if (summary) {
+                    summary.style.background = 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)';
+                    summary.style.opacity = '0.8';
+                }
+            });
+        }
+        
+        // 기존 renderStreamingMarkdown 함수는 호환성을 위해 유지
+        function renderStreamingMarkdown(messageElement, fullText) {
+            return renderStreamingWithThinkBlocks(messageElement, fullText);
         }
 
         // HTML 태그 이스케이프 함수
@@ -647,20 +1054,30 @@
                     }
                 });
 
-                // 수치 데이터 시각화 프로그레스 바 처리
+                // 수치 데이터 시각화 프로그레스 바 처리 (매우 제한적으로만 적용)
                 const codeBlocks = tempDiv.querySelectorAll('pre code');
                 codeBlocks.forEach(code => {
                     const text = code.textContent;
-                    if (text.includes('█') && text.includes('%')) {
+                    // 매우 엄격한 조건: 프로그레스 바 패턴이 명확히 있고, 다른 코드가 없을 때만 처리
+                    const hasProgressPattern = /(.+?):\s*(█+░*)\s*(\d+%)/g.test(text);
+                    const looksLikeProgressOnly = text.split('\n').every(line => 
+                        line.trim() === '' || 
+                        line.includes('█') && line.includes('%') ||
+                        line.match(/^(탕구비|러너비|인게이트비|비율|설계|주조)/i)
+                    );
+                    
+                    if (hasProgressPattern && looksLikeProgressOnly && text.length < 500) {
                         // 프로그레스 바가 포함된 코드 블록을 특별 처리
                         const lines = text.split('\n');
                         let enhancedHTML = '';
+                        let hasValidProgress = false;
                         
                         lines.forEach(line => {
                             if (line.includes('█') && line.includes('%')) {
                                 // 프로그레스 바 라인 스타일링
                                 const progressMatch = line.match(/(.+?):\s*(█+░*)\s*(\d+%)\s*(.*)/);
                                 if (progressMatch) {
+                                    hasValidProgress = true;
                                     const [, label, bar, percentage, desc] = progressMatch;
                                     const filledBlocks = (bar.match(/█/g) || []).length;
                                     const totalBlocks = bar.length;
@@ -679,12 +1096,13 @@
                                 } else {
                                     enhancedHTML += escapeHtml(line) + '<br>';
                                 }
-                            } else {
+                            } else if (line.trim() !== '') {
                                 enhancedHTML += escapeHtml(line) + '<br>';
                             }
                         });
                         
-                        if (enhancedHTML !== '') {
+                        // 실제로 유효한 프로그레스 바가 있었을 때만 적용
+                        if (hasValidProgress && enhancedHTML !== '') {
                             code.innerHTML = enhancedHTML;
                         }
                     }
@@ -746,16 +1164,16 @@
                     items.forEach(li => {
                         li.style.cssText = 'margin: 0.5rem 0; line-height: 1.6;';
                         
-                        // 체크리스트 스타일
+                        // 체크리스트 스타일 - 이모지만 색상 적용, 나머지 텍스트는 기본 색상 유지
                         const text = li.textContent;
                         if (text.includes('✅')) {
-                            li.style.color = '#28a745';
-                            li.style.fontWeight = '500';
+                            li.innerHTML = li.innerHTML.replace(/✅/g, '<span style="color: #28a745; display: inline;">✅</span>');
+                            li.style.cssText += '; font-weight: 500; color: inherit;'; // 기본 색상 상속 보장
                         } else if (text.includes('❌')) {
-                            li.style.color = '#dc3545';
-                            li.style.fontWeight = '500';
+                            li.innerHTML = li.innerHTML.replace(/❌/g, '<span style="color: #dc3545; display: inline;">❌</span>');
+                            li.style.cssText += '; font-weight: 500; color: inherit;'; // 기본 색상 상속 보장
                         } else if (text.includes('⚙️')) {
-                            li.style.color = '#6c757d';
+                            li.innerHTML = li.innerHTML.replace(/⚙️/g, '<span style="color: #6c757d;">⚙️</span>');
                             li.style.fontWeight = '500';
                         }
                     });
@@ -772,6 +1190,12 @@
         function cleanIncompleteHTML(html) {
             if (!html) return '';
             
+            // HTML 참조 문헌인 경우 태그 정리를 스킵
+            if ((html.trim().startsWith('<details') && html.includes('참조 문헌')) ||
+                (html.includes('<details') && html.includes('참조 문헌') && html.includes('</details>'))) {
+                return html;
+            }
+            
             // 닫히지 않은 태그들을 찾아서 제거하거나 닫기
             let cleaned = html;
             
@@ -780,13 +1204,22 @@
                 ['<strong>', '</strong>'],
                 ['<em>', '</em>'],
                 ['<code>', '</code>'],
+                ['<pre>', '</pre>'],
                 ['<p>', '</p>'],
                 ['<h1>', '</h1>'],
                 ['<h2>', '</h2>'],
                 ['<h3>', '</h3>'],
                 ['<h4>', '</h4>'],
                 ['<h5>', '</h5>'],
-                ['<h6>', '</h6>']
+                ['<h6>', '</h6>'],
+                ['<ul>', '</ul>'],
+                ['<ol>', '</ol>'],
+                ['<li>', '</li>'],
+                ['<blockquote>', '</blockquote>'],
+                ['<details>', '</details>'],
+                ['<summary>', '</summary>'],
+                ['<div>', '</div>'],
+                ['<span>', '</span>']
             ];
 
             for (const [openTag, closeTag] of tagPairs) {
@@ -1271,6 +1704,11 @@
                                             fullResponse += data.content;
                                             console.log('Content appended, fullResponse length:', fullResponse.length);
                                             
+                                            // 참고문헌 디버깅 - 모든 content 로그
+                                            if (data.content.includes('참조') || data.content.includes('details') || data.content.includes('문헌')) {
+                                                console.log('🔍 참고문헌 관련 콘텐츠:', data.content);
+                                            }
+                                            
                                             // 실시간 마크다운 렌더링 (줄 단위)
                                             renderStreamingMarkdown(messageContent, fullResponse);
                                             
@@ -1285,6 +1723,19 @@
                                             
                                             // Complete progress in final stage
                                             updateChatProgressStep('generate', '답변 생성 완료!');
+                                            
+                                            // 스트리밍 완료 시 모든 THINK 블록 접기
+                                            setTimeout(() => {
+                                                const allThinkAccordions = messageContent.querySelectorAll('.thinking-accordion');
+                                                allThinkAccordions.forEach(accordion => {
+                                                    accordion.removeAttribute('open');
+                                                    const statusSpan = accordion.querySelector('summary span:last-child');
+                                                    if (statusSpan && !statusSpan.textContent.includes('답변 완료됨')) {
+                                                        statusSpan.textContent = '(답변 완료됨)';
+                                                    }
+                                                });
+                                                console.log('스트리밍 완료 - 모든 THINK 블록 접기 처리됨');
+                                            }, 100);
                                         } else if (data.type === 'validation_error') {
                                             // Handle validation errors from backend
                                             console.log('Validation error received:', data);
@@ -1336,20 +1787,43 @@
                 // Remove streaming class and finalize message
                 streamingMessageDiv.classList.remove('streaming');
                 
-                // Remove typing cursor and do final markdown rendering
+                // Remove typing cursor and process references
                 if (fullResponse && messageContent) {
-                    // Final markdown rendering without cursor
-                    try {
-                        if (window.marked) {
-                            let finalHTML = window.marked.parse(fullResponse);
-                            finalHTML = enhanceMarkdownRendering(finalHTML);
-                            messageContent.innerHTML = finalHTML;
-                        } else {
-                            messageContent.textContent = fullResponse;
-                        }
-                    } catch (markdownError) {
-                        console.warn('Final markdown rendering failed:', markdownError);
-                        messageContent.textContent = fullResponse;
+                    // 타이핑 커서 제거
+                    const typingCursors = messageContent.querySelectorAll('.typing-cursor');
+                    typingCursors.forEach(cursor => cursor.remove());
+                    
+                    // 참고문헌 후처리 - 전체 응답에서 참고문헌 추출
+                    const referenceMatch = fullResponse.match(/<details[^>]*>[\s\S]*?참조 문헌[\s\S]*?<\/details>/i);
+                    if (referenceMatch) {
+                        const referenceHTML = referenceMatch[0];
+                        console.log('참고문헌 발견, 후처리 중:', referenceHTML.length, '자');
+                        
+                        // 기존 내용에서 참고문헌 제거 (중복 방지)
+                        let cleanContent = messageContent.innerHTML;
+                        
+                        // 1. 기존 참고문헌만 제거 (중복 방지)
+                        cleanContent = cleanContent.replace(/<details[^>]*>[\s\S]*?참조 문헌[\s\S]*?<\/details>/gi, '');
+                        
+                        // 2. 텍스트로 렌더링된 불완전한 HTML 조각들만 제거 (매우 정교한 패턴)
+                        // - 단독으로 나타나는 HTML 태그들만 제거하고, 실제 HTML 구조는 보존
+                        // - 줄 단위로 확인하여 고립된 태그만 제거
+                        const lines = cleanContent.split('\n');
+                        const filteredLines = lines.map(line => {
+                            const trimmedLine = line.trim();
+                            // 한 줄에 단독으로 나타나는 HTML 태그만 제거 (텍스트 없이)
+                            if (/^<\/?(?:details|summary|div|span)[^>]*>$/.test(trimmedLine)) {
+                                return '';
+                            }
+                            return line;
+                        });
+                        cleanContent = filteredLines.join('\n');
+                        
+                        // 참고문헌을 맨 끝에 추가
+                        messageContent.innerHTML = cleanContent + referenceHTML;
+                        console.log('참고문헌 후처리 완료');
+                    } else {
+                        console.log('참고문헌 없음');
                     }
                 }
                 
@@ -1358,37 +1832,57 @@
                     updateChatProgressStep('generate', '답변 생성 완료!');
                 }
                 
+                // 스트리밍 완료 후 모든 THINK 블록 접기 (최종 처리)
+                setTimeout(() => {
+                    if (messageContent) {
+                        const finalThinkAccordions = messageContent.querySelectorAll('.thinking-accordion');
+                        finalThinkAccordions.forEach(accordion => {
+                            accordion.removeAttribute('open');
+                            const statusSpan = accordion.querySelector('summary span:last-child');
+                            if (statusSpan && !statusSpan.textContent.includes('답변 완료됨')) {
+                                statusSpan.textContent = '(답변 완료됨)';
+                            }
+                        });
+                        if (finalThinkAccordions.length > 0) {
+                            console.log(`스트림 종료 - ${finalThinkAccordions.length}개 THINK 블록 최종 접기 처리됨`);
+                        }
+                    }
+                }, 200);
+                
                 // Clear any pending markdown timeout
                 if (markdownTimeout) {
                     clearTimeout(markdownTimeout);
                 }
                 
-                // Always convert to enhanced multimodal message format for consistent styling
+                // 스트리밍 메시지를 enhanced multimodal 형태로 변환하지 않고 그대로 유지
+                // THINK 블록 상태를 보존하기 위해 추가 변환 작업 스킵
                 if (fullResponse) {
-                    console.log('Converting to enhanced multimodal message:', {
-                        responseLength: fullResponse.length,
-                        hasMediaReferences: !!mediaReferences,
-                        hasContentSummary: !!contentSummary,
-                        streamingDivExists: !!streamingMessageDiv.parentNode
-                    });
+                    console.log('스트리밍 완료 - 메시지 변환 스킵하여 THINK 블록 상태 보존');
                     
-                    // Don't skip conversion for cached responses - ensure they get proper formatting
+                    // 스트리밍 메시지의 클래스만 정리하고 내용은 유지
+                    streamingMessageDiv.classList.remove('streaming');
+                    streamingMessageDiv.classList.add('bot-message');
                     
-                    // Create enhanced multimodal message (works for both cached and regular responses)
-                    const enhancedMessageDiv = createEnhancedMultimodalMessage({
-                        response: fullResponse,
-                        media_references: mediaReferences || null,
-                        content_summary: contentSummary || null,
-                        cached: false
-                    });
-                    
-                    // Replace streaming message with enhanced version
-                    if (streamingMessageDiv.parentNode) {
-                        streamingMessageDiv.parentNode.replaceChild(enhancedMessageDiv, streamingMessageDiv);
-                        console.log('Message converted to enhanced multimodal format');
-                    } else {
-                        console.warn('Streaming message div not found in DOM');
-                    }
+                    // 최종적으로 THINK 블록들이 접힌 상태인지 확인
+                    setTimeout(() => {
+                        const allAccordions = streamingMessageDiv.querySelectorAll('.thinking-accordion');
+                        allAccordions.forEach(accordion => {
+                            accordion.removeAttribute('open');
+                            accordion.open = false;
+                            
+                            // 이벤트 핸들러 설정
+                            setupThinkBlockToggle(accordion);
+                            
+                            const statusSpan = accordion.querySelector('summary span:last-child');
+                            if (statusSpan) {
+                                statusSpan.textContent = '(완료)';
+                                statusSpan.style.color = '#28a745';
+                            }
+                        });
+                        if (allAccordions.length > 0) {
+                            console.log(`최종 상태 확인 완료 - ${allAccordions.length}개 THINK 블록 모두 접혀있음`);
+                        }
+                    }, 500);
                 } else {
                     // Fallback for empty responses
                     if (window.marked && fullResponse) {
@@ -1577,6 +2071,32 @@
             sendButton.style.backgroundColor = '';
             sendButton.disabled = false;
             currentStreamAbortController = null;
+            
+            // 스트리밍 완료 시 모든 메시지의 THINK 블록을 최종 상태로 설정 (강력한 처리)
+            setTimeout(() => {
+                const allMessages = chatHistory.querySelectorAll('.bot-message, .message');
+                allMessages.forEach(messageElement => {
+                    const accordions = messageElement.querySelectorAll('.thinking-accordion');
+                    if (accordions.length > 0) {
+                        accordions.forEach(accordion => {
+                            // 강제로 접힘 상태 설정
+                            accordion.removeAttribute('open');
+                            accordion.open = false;
+                            
+                            // 이벤트 핸들러 설정
+                            setupThinkBlockToggle(accordion);
+                            
+                            // 상태 텍스트 업데이트
+                            const statusSpan = accordion.querySelector('summary span:last-child');
+                            if (statusSpan) {
+                                statusSpan.textContent = '(완료)';
+                                statusSpan.style.color = '#28a745';
+                            }
+                        });
+                        console.log(`hideStopButton에서 ${accordions.length}개 THINK 블록 최종 처리 완료`);
+                    }
+                });
+            }, 200);
         }
 
         function stopStreaming() {
@@ -1690,8 +2210,9 @@
                         });
                     }
                     
-                    // For cached responses, ensure proper markdown parsing
-                    let parsedHtml = window.marked.parse(result.response);
+                    // For cached responses, ensure proper markdown parsing - THINK 블록 필터링 적용
+                    const filteredResponse = styleThinkBlocks(result.response);
+                    let parsedHtml = window.marked.parse(filteredResponse);
                     parsedHtml = enhanceMarkdownRendering(parsedHtml);
                     responseDiv.innerHTML = parsedHtml;
                     
@@ -1715,37 +2236,17 @@
                     
                 } catch (markdownError) {
                     console.error('Markdown parsing failed:', markdownError);
-                    responseDiv.textContent = result.response;
+                    const filteredResponse = styleThinkBlocks(result.response);
+                    responseDiv.textContent = filteredResponse;
                 }
             } else {
                 console.warn('Marked not available or no response text');
-                responseDiv.textContent = result.response || '';
+                const filteredResponse = styleThinkBlocks(result.response || '');
+                responseDiv.textContent = filteredResponse;
             }
             messageDiv.appendChild(responseDiv);
             
-            // Content summary (show for both cached and regular responses)
-            if (result.content_summary && Object.keys(result.content_summary).length > 0) {
-                const summaryDiv = document.createElement('div');
-                summaryDiv.classList.add('content-summary');
-                const summary = result.content_summary;
-                
-                // Check if we have any meaningful content to display
-                const hasContent = (summary.text_chunks && summary.text_chunks > 0) || 
-                                  (summary.images && summary.images > 0) || 
-                                  (summary.tables && summary.tables > 0);
-                
-                if (hasContent) {
-                    summaryDiv.innerHTML = `
-                        <div class="summary-title">📊 참조 콘텐츠</div>
-                        <div class="summary-items">
-                            <span class="summary-item">📄 텍스트: ${summary.text_chunks || 0}개</span>
-                            <span class="summary-item">🖼️ 이미지: ${summary.images || 0}개</span>
-                            <span class="summary-item">📋 표: ${summary.tables || 0}개</span>
-                        </div>
-                    `;
-                    messageDiv.appendChild(summaryDiv);
-                }
-            }
+            // Content summary removed - now handled by streaming service with accordion format
             
             // Media references - 현재 개발 중으로 숨김 처리
             /* 참조 이미지/표 기능은 현재 개발 중입니다
@@ -2128,7 +2629,7 @@
                 
                 select.innerHTML = '';
                 if (data.models && data.models.length > 0) {
-                    let gemma3Found = false;
+                    let qwenFound = false;
                     let defaultModel = null;
                     
                     data.models.forEach((model, index) => {
@@ -2137,9 +2638,13 @@
                         opt.textContent = formatModelName(model);
                         select.appendChild(opt);
                         
-                        // Gemma3 모델 찾기 (gemma2나 gemma로 시작하는 모델 우선 선택)
-                        if (!gemma3Found && (model.toLowerCase().includes('gemma2') || model.toLowerCase().includes('gemma'))) {
-                            gemma3Found = true;
+                        // qwen3:30b-a3b 모델 찾기 (우선 선택)
+                        if (!qwenFound && model.toLowerCase().includes('qwen3:30b-a3b')) {
+                            qwenFound = true;
+                            defaultModel = model;
+                        }
+                        // qwen 계열 모델 찾기 (두 번째 우선순위)
+                        else if (!qwenFound && !defaultModel && model.toLowerCase().includes('qwen')) {
                             defaultModel = model;
                         }
                         
@@ -2470,6 +2975,28 @@
                     stopDocumentListPolling();
                     updateAutoRefreshIndicator('비활성화');
                 }
+            });
+            
+            // 외부 접속 토글
+            const externalAccessToggle = document.getElementById('external-access-toggle');
+            const externalAccessBadge = document.getElementById('external-access-badge');
+            externalAccessToggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    console.log('외부 접속: 활성화');
+                    externalAccessBadge.textContent = '🟢 활성';
+                    externalAccessBadge.style.color = '#28a745';
+                    externalAccessBadge.style.background = 'rgba(40, 167, 69, 0.1)';
+                    externalAccessBadge.style.borderColor = 'rgba(40, 167, 69, 0.3)';
+                    externalAccessBadge.title = '외부 API/웹 검색 허용됨';
+                } else {
+                    console.log('외부 접속: 비활성화');
+                    externalAccessBadge.textContent = '🔴 차단';
+                    externalAccessBadge.style.color = '#dc3545';
+                    externalAccessBadge.style.background = 'rgba(220, 53, 69, 0.1)';
+                    externalAccessBadge.style.borderColor = 'rgba(220, 53, 69, 0.3)';
+                    externalAccessBadge.title = '외부 API/웹 검색 차단됨';
+                }
+                // 실제 설정 변경 로직은 여기에 구현
             });
         }
         
