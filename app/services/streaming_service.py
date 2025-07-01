@@ -200,7 +200,8 @@ def process_multimodal_llm_chat_request_stream(
             if meaningful_response:
                 references = generate_consistent_references(multimodal_content)
                 if references:
-                    yield references
+                    # 참고문헌을 한 번에 전송하여 chunk 분할 방지
+                    yield f"\n\n{references}"
                 
         logger.info("Streaming response completed")
         
