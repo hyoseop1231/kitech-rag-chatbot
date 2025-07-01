@@ -898,12 +898,31 @@
                         }
                     }
 
-                    // 완성된 부분 렌더링
+                    // 완성된 부분 렌더링 (참고문헌 보호)
                     if (textToRender && textToRender.trim()) {
                         try {
-                            answerHTML = window.marked.parse(textToRender);
+                            // 참고문헌 HTML을 임시로 분리해서 보호
+                            let protectedText = textToRender;
+                            let referenceHTML = '';
+                            const referenceMatch = protectedText.match(/<details[^>]*>[\s\S]*?참조 문헌[\s\S]*?<\/details>/i);
+                            
+                            if (referenceMatch) {
+                                referenceHTML = referenceMatch[0];
+                                protectedText = protectedText.replace(referenceMatch[0], '<!-- REFERENCE_PLACEHOLDER -->');
+                                console.log('참고문헌 HTML 보호됨:', referenceHTML.length, '자');
+                            }
+                            
+                            // 마크다운 파싱 (참고문헌 제외)
+                            answerHTML = window.marked.parse(protectedText);
                             answerHTML = cleanIncompleteHTML(answerHTML);
                             answerHTML = enhanceMarkdownRendering(answerHTML);
+                            
+                            // 참고문헌 HTML을 다시 삽입
+                            if (referenceHTML) {
+                                answerHTML = answerHTML.replace('<!-- REFERENCE_PLACEHOLDER -->', referenceHTML);
+                                console.log('참고문헌 HTML 복원됨');
+                            }
+                            
                         } catch (e) {
                             console.warn('Markdown parsing failed for completed text:', e);
                             answerHTML = `<p>${escapeHtml(textToRender)}</p>`;
@@ -1863,16 +1882,28 @@
                     const typingCursors = messageContent.querySelectorAll('.typing-cursor');
                     typingCursors.forEach(cursor => cursor.remove());
                     
-                    // 참고문헌이 제대로 렌더링되었는지 확인만 수행
-                    const referenceDetails = messageContent.querySelector('details');
-                    const hasReferences = referenceDetails && (
-                        referenceDetails.innerHTML.includes('참조 문헌') || 
-                        referenceDetails.innerHTML.includes('📚')
-                    );
+                    // 참고문헌이 제대로 렌더링되었는지 확인만 수행 (더 정확한 검사)
+                    const allDetails = messageContent.querySelectorAll('details');
+                    let hasReferences = false;
+                    
+                    allDetails.forEach(detail => {
+                        const summary = detail.querySelector('summary');
+                        if (summary && (summary.textContent.includes('참조 문헌') || summary.textContent.includes('📚'))) {
+                            hasReferences = true;
+                            console.log('참고문헌 아코디언 정상 확인됨:', summary.textContent.trim());
+                        }
+                    });
+                    
+                    // 또는 HTML 텍스트에서 직접 확인
+                    if (!hasReferences && messageContent.innerHTML.includes('참조 문헌')) {
+                        hasReferences = true;
+                        console.log('참고문헌 HTML 직접 확인됨');
+                    }
+                    
                     if (hasReferences) {
-                        console.log('참고문헌 정상 렌더링 확인됨');
+                        console.log('✅ 참고문헌 최종 렌더링 성공');
                     } else {
-                        console.log('참고문헌 없음 또는 렌더링 문제 없음');
+                        console.log('❌ 참고문헌 렌더링 실패 또는 없음');
                     }
                 }
                 
