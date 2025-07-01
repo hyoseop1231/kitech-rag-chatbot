@@ -836,9 +836,10 @@
                             continue;
                         }
                         
-                        // 참고문헌 블록 내부는 모든 HTML 보존
+                        // 참고문헌 블록 내부는 모든 HTML 보존 (마크다운 파싱 완전 우회)
                         if (inReferenceBlock) {
                             filteredLines.push(lines[i]);
+                            console.log('🔒 참고문헌 내부 라인 보존:', lines[i].substring(0, 50) + '...');
                             continue;
                         }
                         
@@ -898,29 +899,32 @@
                         }
                     }
 
-                    // 완성된 부분 렌더링 (참고문헌 보호)
+                    // 완성된 부분 렌더링 (참고문헌 완전 분리)
                     if (textToRender && textToRender.trim()) {
                         try {
-                            // 참고문헌 HTML을 임시로 분리해서 보호
-                            let protectedText = textToRender;
-                            let referenceHTML = '';
-                            const referenceMatch = protectedText.match(/<details[^>]*>[\s\S]*?참조 문헌[\s\S]*?<\/details>/i);
+                            // 참고문헌을 완전히 분리해서 별도 처리
+                            let markdownText = textToRender;
+                            let separatedReferenceHTML = '';
+                            
+                            const referenceMatch = markdownText.match(/<details[^>]*>[\s\S]*?참조 문헌[\s\S]*?<\/details>/i);
                             
                             if (referenceMatch) {
-                                referenceHTML = referenceMatch[0];
-                                protectedText = protectedText.replace(referenceMatch[0], '<!-- REFERENCE_PLACEHOLDER -->');
-                                console.log('참고문헌 HTML 보호됨:', referenceHTML.length, '자');
+                                separatedReferenceHTML = referenceMatch[0];
+                                markdownText = markdownText.replace(referenceMatch[0], '').trim();
+                                console.log('🔒 참고문헌 완전 분리됨:', separatedReferenceHTML.length, '자');
                             }
                             
-                            // 마크다운 파싱 (참고문헌 제외)
-                            answerHTML = window.marked.parse(protectedText);
-                            answerHTML = cleanIncompleteHTML(answerHTML);
-                            answerHTML = enhanceMarkdownRendering(answerHTML);
+                            // 마크다운 파싱 (참고문헌 없이)
+                            if (markdownText) {
+                                answerHTML = window.marked.parse(markdownText);
+                                answerHTML = cleanIncompleteHTML(answerHTML);
+                                answerHTML = enhanceMarkdownRendering(answerHTML);
+                            }
                             
-                            // 참고문헌 HTML을 다시 삽입
-                            if (referenceHTML) {
-                                answerHTML = answerHTML.replace('<!-- REFERENCE_PLACEHOLDER -->', referenceHTML);
-                                console.log('참고문헌 HTML 복원됨');
+                            // 참고문헌을 마크다운 파싱 후 직접 추가
+                            if (separatedReferenceHTML) {
+                                answerHTML = (answerHTML || '') + separatedReferenceHTML;
+                                console.log('🔓 참고문헌 직접 추가됨 - 마크다운 파싱 우회');
                             }
                             
                         } catch (e) {
@@ -973,8 +977,18 @@
                     }
                 }
 
-                // 최종 HTML 설정
-                messageElement.innerHTML = processedHTML + answerHTML;
+                // 최종 HTML 설정 (더 안전한 DOM 삽입)
+                const finalHTML = processedHTML + answerHTML;
+                
+                // 참고문헌이 포함된 경우 특별 처리
+                if (finalHTML.includes('<details') && finalHTML.includes('참조 문헌')) {
+                    // 참고문헌이 있는 경우 innerHTML 직접 사용
+                    messageElement.innerHTML = finalHTML;
+                    console.log('📚 참고문헌 포함 HTML 직접 삽입');
+                } else {
+                    // 일반적인 경우
+                    messageElement.innerHTML = finalHTML;
+                }
                 
                 // DOM 업데이트 후 THINK 블록 이벤트 설정 (항상 실행)
                 setTimeout(() => {
@@ -5056,6 +5070,24 @@
         // marked.js CDN 추가
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+        script.onload = function() {
+            // marked.js 로드 완료 후 전역 설정 적용
+            if (window.marked && window.marked.setOptions) {
+                window.marked.setOptions({
+                    breaks: true,           // 줄바꿈 처리
+                    gfm: true,             // GitHub Flavored Markdown
+                    tables: true,          // 표 지원
+                    pedantic: false,       // 엄격하지 않은 파싱
+                    sanitize: false,       // HTML 허용 (중요!)
+                    smartLists: true,      // 똑똑한 리스트 처리
+                    smartypants: false,    // 따옴표 변환 비활성화
+                    headerIds: false,      // 헤더 ID 생성 비활성화
+                    mangle: false,         // 링크 mangling 비활성화
+                    xhtml: false           // XHTML 출력 비활성화
+                });
+                console.log('✅ Marked.js 전역 설정 완료 - HTML 렌더링 허용');
+            }
+        };
         document.head.appendChild(script);
     </script>
 </body>
