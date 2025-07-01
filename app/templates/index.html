@@ -799,8 +799,43 @@
                     // 불완전한 HTML 태그들 필터링 (참고문헌 조각들 제거)
                     let filteredText = cleanAnswer;
                     
-                    // 단독으로 나타나는 HTML 태그들 제거 (줄 전체가 태그인 경우)
-                    filteredText = filteredText.replace(/^\s*<\/?(?:details|summary|div|span)[^>]*>\s*$/gm, '');
+                    // 참고문헌 HTML 구조는 보존하고, 다른 단독 HTML 태그들만 제거
+                    const lines = filteredText.split('\n');
+                    const filteredLines = [];
+                    let inReferenceBlock = false;
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        
+                        // 참고문헌 블록 시작 감지
+                        if (line.includes('<details') && line.includes('참조 문헌')) {
+                            inReferenceBlock = true;
+                            filteredLines.push(lines[i]);
+                            continue;
+                        }
+                        
+                        // 참고문헌 블록 종료 감지
+                        if (inReferenceBlock && line.includes('</details>')) {
+                            inReferenceBlock = false;
+                            filteredLines.push(lines[i]);
+                            continue;
+                        }
+                        
+                        // 참고문헌 블록 내부는 모든 HTML 보존
+                        if (inReferenceBlock) {
+                            filteredLines.push(lines[i]);
+                            continue;
+                        }
+                        
+                        // 참고문헌 블록 외부에서만 단독 HTML 태그 제거
+                        if (/^\s*<\/?(?:details|summary|div|span)[^>]*>\s*$/.test(line)) {
+                            continue; // 이 줄은 제거
+                        }
+                        
+                        filteredLines.push(lines[i]);
+                    }
+                    
+                    filteredText = filteredLines.join('\n');
                     
                     // 공백만 남은 줄들 제거
                     filteredText = filteredText.replace(/^\s*$/gm, '').trim();
@@ -1793,37 +1828,12 @@
                     const typingCursors = messageContent.querySelectorAll('.typing-cursor');
                     typingCursors.forEach(cursor => cursor.remove());
                     
-                    // 참고문헌 후처리 - 전체 응답에서 참고문헌 추출
-                    const referenceMatch = fullResponse.match(/<details[^>]*>[\s\S]*?참조 문헌[\s\S]*?<\/details>/i);
-                    if (referenceMatch) {
-                        const referenceHTML = referenceMatch[0];
-                        console.log('참고문헌 발견, 후처리 중:', referenceHTML.length, '자');
-                        
-                        // 기존 내용에서 참고문헌 제거 (중복 방지)
-                        let cleanContent = messageContent.innerHTML;
-                        
-                        // 1. 기존 참고문헌만 제거 (중복 방지)
-                        cleanContent = cleanContent.replace(/<details[^>]*>[\s\S]*?참조 문헌[\s\S]*?<\/details>/gi, '');
-                        
-                        // 2. 텍스트로 렌더링된 불완전한 HTML 조각들만 제거 (매우 정교한 패턴)
-                        // - 단독으로 나타나는 HTML 태그들만 제거하고, 실제 HTML 구조는 보존
-                        // - 줄 단위로 확인하여 고립된 태그만 제거
-                        const lines = cleanContent.split('\n');
-                        const filteredLines = lines.map(line => {
-                            const trimmedLine = line.trim();
-                            // 한 줄에 단독으로 나타나는 HTML 태그만 제거 (텍스트 없이)
-                            if (/^<\/?(?:details|summary|div|span)[^>]*>$/.test(trimmedLine)) {
-                                return '';
-                            }
-                            return line;
-                        });
-                        cleanContent = filteredLines.join('\n');
-                        
-                        // 참고문헌을 맨 끝에 추가
-                        messageContent.innerHTML = cleanContent + referenceHTML;
-                        console.log('참고문헌 후처리 완료');
+                    // 참고문헌이 제대로 렌더링되었는지 확인만 수행
+                    const referenceExists = messageContent.querySelector('details[style*="참조 문헌"], summary:contains("참조 문헌")');
+                    if (referenceExists) {
+                        console.log('참고문헌 정상 렌더링 확인됨');
                     } else {
-                        console.log('참고문헌 없음');
+                        console.log('참고문헌 없음 또는 렌더링 문제 없음');
                     }
                 }
                 
