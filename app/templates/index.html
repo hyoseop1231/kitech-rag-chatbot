@@ -855,6 +855,13 @@
                     // 공백만 남은 줄들 제거
                     filteredText = filteredText.replace(/^\s*$/gm, '').trim();
                     
+                    // 추가적인 orphaned HTML 태그 정리 (참고문헌 완료 후 남은 태그들)
+                    filteredText = filteredText.replace(/^\s*<\/(?:details|summary|div|span)>\s*$/gm, '');
+                    filteredText = filteredText.replace(/^\s*<(?:details|summary|div|span)[^>]*>\s*$/gm, '');
+                    
+                    // 연속된 빈 줄 정리
+                    filteredText = filteredText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+                    
                     // 필터링 후 빈 내용이면 스킵
                     if (!filteredText) {
                         return;
@@ -1280,7 +1287,20 @@
                 if (openCount > closeCount) {
                     cleaned += closeTag.repeat(openCount - closeCount);
                 }
+                // 닫는 태그가 더 많으면 orphaned 닫는 태그 제거
+                else if (closeCount > openCount) {
+                    // 단독으로 나타나는 닫는 태그 제거 (줄 시작/끝에서)
+                    const orphanPattern = new RegExp(`^\\s*${escapeRegex(closeTag)}\\s*$`, 'gm');
+                    cleaned = cleaned.replace(orphanPattern, '');
+                    
+                    // 텍스트 끝에 나타나는 닫는 태그도 제거
+                    const endPattern = new RegExp(`\\s*${escapeRegex(closeTag)}\\s*$`, 'g');
+                    cleaned = cleaned.replace(endPattern, '');
+                }
             }
+            
+            // 추가적으로 연속된 빈 줄 정리
+            cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
 
             return cleaned;
         }
