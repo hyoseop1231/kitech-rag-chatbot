@@ -803,13 +803,27 @@
                     const lines = filteredText.split('\n');
                     const filteredLines = [];
                     let inReferenceBlock = false;
+                    let pendingDetailsTag = false;
                     
                     for (let i = 0; i < lines.length; i++) {
                         const line = lines[i].trim();
                         
-                        // 참고문헌 블록 시작 감지
-                        if (line.includes('<details') && line.includes('참조 문헌')) {
-                            inReferenceBlock = true;
+                        // 참고문헌 블록 시작 감지 - 2단계 검사
+                        if (line.includes('<details')) {
+                            pendingDetailsTag = true;
+                            // 다음 몇 줄에서 "참조 문헌" 확인
+                            let foundReference = false;
+                            for (let j = i; j < Math.min(i + 5, lines.length); j++) {
+                                if (lines[j].includes('참조 문헌') || lines[j].includes('📚')) {
+                                    foundReference = true;
+                                    break;
+                                }
+                            }
+                            if (foundReference) {
+                                inReferenceBlock = true;
+                                pendingDetailsTag = false;
+                                console.log('참고문헌 블록 시작 감지됨');
+                            }
                             filteredLines.push(lines[i]);
                             continue;
                         }
@@ -818,6 +832,7 @@
                         if (inReferenceBlock && line.includes('</details>')) {
                             inReferenceBlock = false;
                             filteredLines.push(lines[i]);
+                            console.log('참고문헌 블록 종료됨');
                             continue;
                         }
                         

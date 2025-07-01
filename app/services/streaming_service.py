@@ -10,56 +10,93 @@ logger = get_logger(__name__)
 
 def generate_consistent_references(multimodal_content: Dict[str, Any]) -> str:
     """
-    Generate consistent reference format from multimodal content
+    Generate accordion-style reference format from multimodal content with relevance-based sorting
     
     Args:
         multimodal_content: Retrieved content with text, images, tables
         
     Returns:
-        str: Formatted reference section
+        str: Formatted reference section with HTML accordion (text documents only, sorted by relevance)
     """
-    references = []
-    
-    # Extract text sources
+    # Extract text sources with relevance information
+    text_refs = []
     text_data = multimodal_content.get("text", multimodal_content.get("text_chunks", []))
-    text_sources = set()
     
     if isinstance(text_data, list) and text_data:
+        source_info = {}  # Dictionary to track source info with best distance
+        
         for chunk in text_data:
             if isinstance(chunk, dict):
-                source = chunk.get("metadata", {}).get("source_document_id", "")
+                metadata = chunk.get("metadata", {})
+                source = metadata.get("source_document_id", "")
+                distance = chunk.get("distance", float('inf'))  # Lower distance = higher relevance
+                page = metadata.get("page", "")
+                
                 if source:
-                    text_sources.add(source)
-            
-    for source in sorted(text_sources):
-        references.append(f"📄 {source}")
+                    # Keep the best (lowest) distance for each source
+                    if source not in source_info or distance < source_info[source]["distance"]:
+                        source_info[source] = {
+                            "distance": distance,
+                            "page": page,
+                            "source": source
+                        }
+        
+        # Sort by relevance (lower distance = higher relevance)
+        sorted_sources = sorted(source_info.values(), key=lambda x: x["distance"])
+        
+        # Create text references with citation numbers
+        for i, info in enumerate(sorted_sources, 1):
+            source = info["source"]
+            page = info["page"]
+            page_info = f" (페이지 {page})" if page else ""
+            text_refs.append(f"[{i}] 📄 {source}{page_info}")
     
-    # Extract table sources  
-    tables = multimodal_content.get("tables", [])
-    for i, table in enumerate(tables, 1):
-        if isinstance(table, dict):
-            metadata = table.get("metadata", {})
-            source = metadata.get("source_document_id", "")
-            page = metadata.get("page", "")
-            if source:
-                page_info = f" (페이지 {page})" if page else ""
-                references.append(f"📊 표{i} - {source}{page_info}")
+    total_text = len(text_refs)
     
-    # Extract image sources
-    images = multimodal_content.get("images", [])
-    for i, image in enumerate(images, 1):
-        if isinstance(image, dict):
-            metadata = image.get("metadata", {})
-            source = metadata.get("source_document_id", "")
-            page = metadata.get("page", "")
-            if source:
-                page_info = f" (페이지 {page})" if page else ""
-                references.append(f"🖼️ 이미지{i} - {source}{page_info}")
+    if total_text == 0:
+        return ""
     
-    if references:
-        return f"\n\n## 📚 참고문헌\n" + "\n".join(f"- {ref}" for ref in references)
+    # Determine how many to show initially (max 5)
+    max_initial_show = 5
+    initial_refs = text_refs[:max_initial_show]
+    remaining_refs = text_refs[max_initial_show:]
     
-    return ""
+    # Build main reference list
+    main_content = chr(10).join(f'        <div style="margin-bottom: 4px;">• {ref}</div>' for ref in initial_refs)
+    
+    # Build "more" section if there are additional references
+    more_section = ""
+    if remaining_refs:
+        more_content = chr(10).join(f'        <div style="margin-bottom: 4px;">• {ref}</div>' for ref in remaining_refs)
+        more_section = f"""
+        <details style="margin-top: 8px;">
+            <summary style="cursor: pointer; font-size: 0.9em; color: #667eea; padding: 4px 0; user-select: none;">
+                📖 더 보기 ({len(remaining_refs)}개 추가 문헌)
+            </summary>
+            <div style="margin-top: 8px; padding-left: 12px; border-left: 2px solid #e9ecef;">
+{more_content}
+            </div>
+        </details>"""
+    
+    # Create HTML accordion structure (text documents only)
+    accordion_html = f"""
+
+<details style="margin-top: 12px;">
+    <summary style="cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: #495057; margin-bottom: 0; padding: 8px 12px; background: rgba(102, 126, 234, 0.08); border-radius: 6px; border: 1px solid rgba(102, 126, 234, 0.2); user-select: none;">
+        📚 참조 문헌 및 출처 정보
+        <span style="font-size: 0.8em; color: #6c757d; margin-left: auto;">
+            (📄 {total_text}개 문헌 | 클릭하여 확장)
+        </span>
+    </summary>
+    <div style="margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef;">
+{main_content}{more_section}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #dee2e6; font-size: 0.85em; color: #6c757d;">
+            💡 이 답변은 위의 문서 콘텐츠를 기반으로 생성되었습니다.
+        </div>
+    </div>
+</details>"""
+    
+    return accordion_html
 
 def process_multimodal_llm_chat_request_stream(
     user_query: str,
@@ -101,14 +138,19 @@ def process_multimodal_llm_chat_request_stream(
         table_contents = [table.get("content", "") for table in tables]
         
         # Construct the multimodal prompt
-        prompt = construct_multimodal_rag_prompt(
+        prompt, is_reasoning_model = construct_multimodal_rag_prompt(
             user_query,
             context_chunks,
             image_descriptions,
             table_contents,
             lang,
-            conversation_history
+            conversation_history,
+            model_name
         )
+        
+        # Add think-step-by-step for non-reasoning models
+        if not is_reasoning_model:
+            prompt = f"Think step-by-step.\n{prompt}"
         
         logger.info(f"Starting streaming response for query: {user_query[:50]}...")
         
@@ -136,8 +178,10 @@ def process_multimodal_llm_chat_request_stream(
             full_response_text = "".join(full_response_chunks)
             
             # Use the same meaningful response logic as multimodal_llm_service.py
+            # Lower the minimum length threshold and add more sophisticated checks
             meaningful_response = (
-                len(full_response_text) > 500 and  # Response is substantial
+                len(full_response_text) > 100 and  # Reduced from 500 to 100 characters
+                len(full_response_text.strip()) > 50 and  # At least 50 non-whitespace chars
                 not any(phrase in full_response_text.lower() for phrase in [
                     "정보가 부족", "확인할 수 없습니다", "정보를 찾을 수 없", "내용을 파악하기 어렵",
                     "구체적인 답변을 드릴 수 없", "정보로는", "언급되어 있지 않",
@@ -147,7 +191,9 @@ def process_multimodal_llm_chat_request_stream(
                     "날씨 정보와는 관련이 없", "문서 정보에는", "포함되어 있지 않아", 
                     "알 수 없습니다", "문서의 범위 밖", "범위 밖의 내용", "포함되어 있지 않",
                     "날씨에 대한 답변", "날씨에 대한 내용이 포함", "날씨 정보는"
-                ])
+                ]) and
+                # Additional check: ensure there are actual document references available
+                bool(multimodal_content.get("text", []) or multimodal_content.get("text_chunks", []))
             )
             
             # Only add references if we have meaningful content
