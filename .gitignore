@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment files
+.env
+.env.*
+
+# Uploaded files and vector database (large data, do not commit)
+uploads/
+vector_db_data/
+
+# Logs
+logs/
+*.log
+
+# IDE directories
+.vscode/
+.idea/

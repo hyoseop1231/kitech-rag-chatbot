@@ -1,0 +1,158 @@
+# ===================================================================
+# KITECH RAG Chatbot - Production Dependencies
+# 한국생산기술연구원 멀티모달 RAG 챗봇 시스템
+# ===================================================================
+
+# ===================================================================
+# CORE WEB FRAMEWORK & API
+# ===================================================================
+fastapi>=0.115.0,<0.116.0          # High-performance web framework
+uvicorn[standard]>=0.30.0,<0.31.0  # ASGI server with WebSocket support
+python-multipart>=0.0.20,<0.1.0    # File upload and form handling
+jinja2>=3.1.6,<4.0.0                # Template engine for web interface
+starlette>=0.46.0,<0.47.0           # Core ASGI framework
+
+# ===================================================================
+# HTTP CLIENT & NETWORKING
+# ===================================================================
+requests>=2.32.0,<3.0.0             # Synchronous HTTP client
+httpx>=0.28.0,<0.29.0               # Async HTTP client for better performance
+aiofiles>=24.1.0,<25.0.0            # Async file operations
+
+# ===================================================================
+# STREAMING & REAL-TIME COMMUNICATION
+# ===================================================================
+sse-starlette>=2.2.0,<3.0.0         # Server-Sent Events for streaming responses
+
+# ===================================================================
+# AI & MACHINE LEARNING STACK
+# ===================================================================
+# Embedding & Vector Operations
+sentence-transformers>=3.0.0,<4.0.0 # Korean text embeddings (ko-sroberta-multitask)
+transformers>=4.53.0,<5.0.0         # Transformer models base library
+torch>=2.5.0,<3.0.0                 # PyTorch backend for ML operations
+numpy>=2.1.0,<3.0.0                 # Numerical computing foundation
+
+# Vector Database
+chromadb>=1.0.0,<2.0.0               # Vector database for RAG embeddings
+
+# Text Processing & NLP
+langchain>=0.3.0,<0.4.0             # Text splitting and document processing
+langchain-core>=0.3.0,<0.4.0        # Core LangChain functionality
+langchain-text-splitters>=0.3.0,<0.4.0  # Advanced text chunking
+
+# ===================================================================
+# DOCUMENT PROCESSING & OCR
+# ===================================================================
+# PDF Processing
+PyMuPDF>=1.26.0,<2.0.0              # Fast PDF text and image extraction
+
+# OCR & Image Processing
+pytesseract>=0.3.13,<0.4.0          # OCR text recognition (Korean + English)
+Pillow>=11.0.0,<12.0.0              # Image processing and manipulation
+opencv-python>=4.11.0,<5.0.0        # Advanced computer vision and table detection
+
+# ===================================================================
+# DATA PROCESSING & MANIPULATION
+# ===================================================================
+pandas>=2.3.0,<3.0.0                # Data analysis and table processing
+openpyxl>=3.1.0,<4.0.0              # Excel file support for table extraction
+
+# ===================================================================
+# CONFIGURATION & ENVIRONMENT
+# ===================================================================
+python-dotenv>=1.1.0,<2.0.0         # Environment variable management
+pydantic>=2.11.0,<3.0.0             # Data validation and settings
+pydantic-settings>=2.7.0,<3.0.0     # Advanced configuration management
+
+# ===================================================================
+# SYSTEM UTILITIES & MONITORING
+# ===================================================================
+psutil>=7.0.0,<8.0.0                # System monitoring and resource management
+python-magic>=0.4.27,<0.5.0         # MIME type detection and file validation
+watchdog>=6.0.0,<7.0.0              # File system monitoring
+
+# Performance Monitoring
+prometheus-client>=0.21.0,<0.22.0   # Metrics collection for monitoring
+
+# ===================================================================
+# SECURITY & AUTHENTICATION
+# ===================================================================
+python-jose[cryptography]>=3.3.0,<4.0.0  # JWT token handling and encryption
+passlib[bcrypt]>=1.7.4,<2.0.0       # Password hashing utilities
+
+# ===================================================================
+# LOGGING & ERROR HANDLING
+# ===================================================================
+loguru>=0.7.0,<0.8.0                # Enhanced logging with rotation
+sentry-sdk[fastapi]>=2.30.0,<3.0.0  # Error tracking and monitoring (optional)
+
+# ===================================================================
+# PRODUCTION SERVER & DEPLOYMENT
+# ===================================================================
+gunicorn>=23.0.0,<24.0.0            # Production WSGI server
+uvloop>=0.21.0,<0.22.0              # High-performance event loop (Unix only)
+
+# ===================================================================
+# DEVELOPMENT & TESTING
+# ===================================================================
+# Testing Framework
+pytest>=8.4.0,<9.0.0                # Testing framework
+pytest-asyncio>=1.0.0,<2.0.0        # Async testing support
+pytest-cov>=6.2.0,<7.0.0            # Code coverage reporting
+pytest-mock>=3.14.0,<4.0.0          # Mock testing utilities
+
+# Development Tools
+black>=24.10.0,<25.0.0              # Code formatting
+ruff>=0.8.0,<0.9.0                  # Fast Python linter
+mypy>=1.13.0,<2.0.0                 # Static type checking
+pre-commit>=4.0.0,<5.0.0            # Git pre-commit hooks
+
+# Performance Profiling (Development)
+memory-profiler>=0.61.0,<0.62.0     # Memory usage profiling
+line-profiler>=4.2.0,<5.0.0         # Line-by-line performance profiling
+
+# ===================================================================
+# OPTIONAL DEPENDENCIES FOR ENHANCED FEATURES
+# ===================================================================
+# Uncomment as needed for additional functionality:
+
+# Advanced Caching
+# redis>=5.5.0,<6.0.0               # Redis for advanced caching and session storage
+
+# Background Task Processing
+# celery[redis]>=5.4.0,<6.0.0       # Distributed task queue for heavy processing
+# flower>=2.1.0,<3.0.0              # Celery monitoring web interface
+
+# Database Support (if needed)
+# sqlalchemy>=2.0.0,<3.0.0          # SQL toolkit and ORM
+# alembic>=1.14.0,<2.0.0            # Database migration tool
+
+# Advanced Model Management
+# huggingface-hub>=0.33.0,<0.34.0   # Model repository and caching
+# modelscope>=1.19.0,<2.0.0         # Alternative model hub
+
+# Graphics and Visualization
+# matplotlib>=3.9.0,<4.0.0          # Plotting and visualization
+# plotly>=5.24.0,<6.0.0             # Interactive plots for monitoring
+
+# API Documentation Enhancement
+# fastapi-users>=13.0.0,<14.0.0     # User authentication system
+# slowapi>=0.1.9,<0.2.0             # Rate limiting middleware
+
+# ===================================================================
+# PLATFORM-SPECIFIC DEPENDENCIES
+# ===================================================================
+# Windows-specific (uncomment on Windows)
+# pywin32>=308; sys_platform == "win32"     # Windows system integration
+
+# Linux/Mac-specific optimizations
+# uvloop>=0.21.0; sys_platform != "win32"   # High-performance event loop
+
+# ===================================================================
+# VERSION CONSTRAINTS FOR SECURITY
+# ===================================================================
+# Security patches and known vulnerability fixes
+urllib3>=2.5.0,<3.0.0               # Security fixes for HTTP handling
+cryptography>=43.0.0,<44.0.0        # Latest security patches
+certifi>=2025.6.15                  # Updated certificate bundle
