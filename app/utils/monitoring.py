@@ -106,7 +106,10 @@ class PerformanceMonitor:
             from app.config import settings
             
             # Try to create a client - this will fail if ChromaDB is not accessible
-            client = chromadb.PersistentClient(path=settings.CHROMA_DATA_PATH)
+            client = chromadb.PersistentClient(
+                path=settings.CHROMA_DATA_PATH,
+                settings=chromadb.Settings(anonymized_telemetry=False)
+            )
             collections = client.list_collections()
             
             return {

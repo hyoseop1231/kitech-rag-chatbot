@@ -13,7 +13,10 @@ logger = get_logger(__name__)
 # ChromaDB 클라이언트 초기화
 # ChromaDB 클라이언트 초기화
 try:
-    client = chromadb.PersistentClient(path=settings.CHROMA_DATA_PATH)
+    client = chromadb.PersistentClient(
+        path=settings.CHROMA_DATA_PATH,
+        settings=chromadb.Settings(anonymized_telemetry=False)
+    )
     logger.info(f"ChromaDB client initialized at: {settings.CHROMA_DATA_PATH}")
 except Exception as e:
     error_msg = f"Error initializing ChromaDB PersistentClient at '{settings.CHROMA_DATA_PATH}': {e}"

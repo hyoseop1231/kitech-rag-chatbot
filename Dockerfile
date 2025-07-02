@@ -122,14 +122,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Install only runtime dependencies (much smaller than build dependencies)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Essential system packages
+    # Essential system packages\
     ca-certificates \
     curl \
-    # OCR runtime (without dev packages)
+    # OCR runtime (without dev packages)\
     tesseract-ocr \
     tesseract-ocr-kor \
     tesseract-ocr-eng \
-    # Runtime libraries for ML/CV (without dev packages)
+    # Runtime libraries for ML/CV (without dev packages)\
     libgl1-mesa-glx \
     libglib2.0-0 \
     libsm6 \
@@ -137,22 +137,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender1 \
     libgomp1 \
     libgfortran5 \
-    # Image processing runtime libraries
+    # Image processing runtime libraries\
     libjpeg62-turbo \
     libpng16-16 \
     libtiff6 \
     libwebp7 \
-    # OpenCV runtime libraries
-    libopencv-core4.5d \
-    libopencv-imgproc4.5d \
-    libopencv-imgcodecs4.5d \
-    # System utilities
+    # OpenCV runtime libraries\
+    libopencv-core406 \
+    libopencv-imgproc406 \
+    libopencv-imgcodecs406 \
+    # System utilities\
     procps \
     htop \
-    # File type detection
+    # File type detection\
     file \
     libmagic1 \
-    # Cleanup
+    # Cleanup\
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/* \
@@ -257,7 +257,7 @@ ENV DEBUG=false \
     WORKER_CONNECTIONS=1000 \
     MAX_REQUESTS=1000 \
     MAX_REQUESTS_JITTER=100 \
-    TIMEOUT=120 \
+    TIMEOUT=300 \
     KEEPALIVE=5 \
     # Application optimization
     PRELOAD_APP=true \
@@ -275,7 +275,7 @@ CMD ["sh", "-c", "gunicorn app.main:app \
     --max-requests ${MAX_REQUESTS} \
     --max-requests-jitter ${MAX_REQUESTS_JITTER} \
     --timeout ${TIMEOUT} \
-    --keepalive ${KEEPALIVE} \
+    --keep-alive ${KEEPALIVE} \
     --preload \
     --access-logfile - \
     --error-logfile - \

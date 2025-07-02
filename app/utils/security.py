@@ -90,10 +90,22 @@ class FileValidator:
         # Remove control characters
         safe_filename = ''.join(c for c in safe_filename if ord(c) >= 32)
         
+        # Calculate maximum allowed length for the original filename part
+        # considering the document_id prefix and underscore separator
+        max_total_length = 240  # Conservative limit to avoid filesystem issues
+        reserved_length = len(document_id) + 1  # +1 for underscore
+        max_filename_length = max_total_length - reserved_length
+        
         # Ensure filename isn't too long (considering filesystem limits)
-        if len(safe_filename) > 150:
+        if len(safe_filename) > max_filename_length:
             name, ext = os.path.splitext(safe_filename)
-            safe_filename = name[:140] + ext
+            # Reserve space for extension
+            max_name_length = max_filename_length - len(ext)
+            if max_name_length > 0:
+                safe_filename = name[:max_name_length] + ext
+            else:
+                # If extension is too long, truncate it too
+                safe_filename = safe_filename[:max_filename_length]
         
         return f"{document_id}_{safe_filename}"
     
