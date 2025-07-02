@@ -18,6 +18,7 @@ services:
       # Security Settings
       - SECRET_KEY=${SECRET_KEY:-change-this-in-production}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+      - CHROMA_ANONYMIZED_TELEMETRY=True
       
       # File Processing
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-200}
@@ -48,10 +49,13 @@ services:
       # Logging
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       
+      # Performance Optimization
+      - PRELOAD_EMBEDDING_MODEL=${PRELOAD_EMBEDDING_MODEL:-false}
+      
     volumes:
       # Persistent data storage
       - kitech_vector_data:/app/vector_db_data
-      - kitech_uploads:/app/uploads
+      - kitech_uploads:/app/uploads:rw
       - kitech_logs:/app/logs
       
       # Optional: Mount custom configuration
@@ -73,9 +77,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
     
     
     # Network configuration
@@ -162,4 +166,4 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 192.168.168.0/24

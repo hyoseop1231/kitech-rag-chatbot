@@ -210,26 +210,38 @@ graph TD
 | **🤖 Ollama** | 8GB+ | qwen3:30b-a3b 모델 | v3.0 기본 모델 |
 | **🔧 GPU** | 선택적 | CUDA/MPS | 성능 가속화 |
 
-### 🚀 **1분 내 빠른 설치 (Docker)**
+### 🚀 **1분 내 빠른 설치 (Docker)** ⭐ **최적화 완료**
 
 ```bash
 # 1. 저장소 클론 및 이동
 git clone https://github.com/your-username/KHS-main.git
 cd KHS-main
 
-# 2. 환경 설정 (선택사항)
+# 2. Ollama 서비스 시작 (필수)
+ollama serve &
+
+# 3. 모델 다운로드 (선택사항)
+ollama pull qwen3:30b-a3b  # 기본 모델
+
+# 4. 환경 설정 (선택사항)
 cp .env.example .env
 # 필요시 .env 파일 편집
 
-# 3. 전체 시스템 실행
-docker-compose up -d
+# 5. 최적화된 시스템 실행 🚀
+docker build --target development -t kitech-dev .
+docker run -d -p 8000:8000 \
+  -e "OLLAMA_API_URL=http://host.docker.internal:11434/api/generate" \
+  -e "PRELOAD_EMBEDDING_MODEL=false" \
+  --name kitech-app kitech-dev
 
-# 4. 로그 확인
-docker-compose logs -f kitech-app
+# 6. 실시간 로그 확인
+docker logs -f kitech-app
 
-# 5. 브라우저에서 접속
+# 7. 브라우저에서 접속 ✅
 # http://localhost:8000
 ```
+
+> **⚡ v3.0 최적화**: 임베딩 모델 사전 로딩 비활성화로 **5초 내 빠른 시작** 보장
 
 ### 🛠️ **상세 로컬 설치 (개발용)**
 
@@ -406,17 +418,28 @@ SIMILARITY_THRESHOLD=0.8
 version: '3.8'
 services:
   kitech-app:
-    build: .
+    build:
+      context: .
+      target: development  # 빠른 시작용 개발 타겟
     ports:
       - "8000:8000"
     environment:
       - OLLAMA_DEFAULT_MODEL=qwen3:30b-a3b
+      - OLLAMA_API_URL=http://host.docker.internal:11434/api/generate
       - ENABLE_EXTERNAL_ACCESS=true
       - SECRET_KEY=${SECRET_KEY}
+      - PRELOAD_EMBEDDING_MODEL=false  # 빠른 시작 최적화
+      - LOG_LEVEL=INFO
     volumes:
       - ./uploads:/app/uploads
       - ./vector_db_data:/app/vector_db_data
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 ```
 
 ### 성능 최적화 가이드

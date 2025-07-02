@@ -75,19 +75,13 @@ if os.path.exists("uploads"):
 # Setup Jinja2 templates
 templates = Jinja2Templates(directory="app/templates")
 
-# Pre-load embedding model to prevent delays on first query
+# Embedding model will be loaded lazily on first request to reduce startup time
 @app.on_event("startup")
 async def startup_event():
     """
-    Application startup event to pre-load embedding model
+    Application startup event - embedding model loading disabled for faster startup
     """
-    try:
-        logger.info("Pre-loading embedding model to prevent first-query delays...")
-        from app.services.text_processing_service import model_manager
-        model_manager.get_model()
-        logger.info("Embedding model pre-loaded successfully")
-    except Exception as e:
-        logger.error(f"Failed to pre-load embedding model: {e}")
+    logger.info("Application startup complete - embedding model will load on first request")
 
 # Placeholder for API router (will be added later)
 from app.api import endpoints
