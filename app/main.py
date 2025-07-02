@@ -45,7 +45,7 @@ async def add_security_headers(request: Request, call_next):
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: blob:; "
         "font-src 'self'; "
-        "connect-src 'self'; "
+        "connect-src 'self' *; "
         "object-src 'none'; "
         "base-uri 'self'"
     )

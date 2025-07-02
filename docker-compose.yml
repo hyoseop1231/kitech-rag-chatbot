@@ -17,7 +17,8 @@ services:
       
       # Security Settings
       - SECRET_KEY=${SECRET_KEY:-change-this-in-production}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - ENABLE_EXTERNAL_ACCESS=${ENABLE_EXTERNAL_ACCESS:-true}
       - CHROMA_ANONYMIZED_TELEMETRY=True
       
       # File Processing
@@ -32,9 +33,9 @@ services:
       
       # LLM Settings
       - OLLAMA_API_URL=${OLLAMA_API_URL:-http://host.docker.internal:11434/api/generate}
-      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-gemma2:9b}
-      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.7}
-      - LLM_NUM_PREDICT_MULTIMODAL=${LLM_NUM_PREDICT_MULTIMODAL:-2048}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-qwen3:30b-a3b}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.5}
+      - LLM_NUM_PREDICT_MULTIMODAL=${LLM_NUM_PREDICT_MULTIMODAL:-3072}
       
       # Database Settings
       - CHROMA_DATA_PATH=/app/vector_db_data
@@ -73,13 +74,13 @@ services:
           memory: 2G
           cpus: '1.0'
     
-    # Health check
+    # Health check (optimized for faster startup)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
-      timeout: 15s
-      retries: 5
-      start_period: 120s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     
     
     # Network configuration

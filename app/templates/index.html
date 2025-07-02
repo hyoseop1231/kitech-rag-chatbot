@@ -474,16 +474,33 @@
                     }
                 });
 
-                // 오류 처리
-                xhr.addEventListener('error', () => {
+                // 오류 처리 (디버깅 정보 추가)
+                xhr.addEventListener('error', (event) => {
+                    console.error('XMLHttpRequest error event:', event);
+                    console.error('xhr.status:', xhr.status);
+                    console.error('xhr.statusText:', xhr.statusText);
+                    console.error('xhr.responseText:', xhr.responseText);
+                    console.error('xhr.readyState:', xhr.readyState);
                     selectedFiles.forEach((file, index) => {
                         updateFileProgress(index, 0, '업로드 오류');
                     });
-                    reject(new Error('네트워크 오류가 발생했습니다'));
+                    reject(new Error(`네트워크 오류: status=${xhr.status}, readyState=${xhr.readyState}`));
                 });
 
-                // 요청 전송
+                // 타임아웃 처리 추가
+                xhr.addEventListener('timeout', () => {
+                    console.error('Upload timeout occurred');
+                    selectedFiles.forEach((file, index) => {
+                        updateFileProgress(index, 0, '업로드 타임아웃');
+                    });
+                    reject(new Error('업로드 타임아웃이 발생했습니다'));
+                });
+
+                // 요청 전송 (타임아웃 설정)
+                xhr.timeout = 300000; // 5분 타임아웃
                 xhr.open('POST', '/api/upload_pdf/');
+                console.log('Sending upload request to:', '/api/upload_pdf/');
+                console.log('FormData entries:', [...formData.entries()].map(([key, value]) => ({key, value: value instanceof File ? `File: ${value.name}` : value})));
                 xhr.send(formData);
             });
         }

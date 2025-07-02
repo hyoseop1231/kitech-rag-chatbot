@@ -227,11 +227,15 @@ ollama pull qwen3:30b-a3b  # 기본 모델
 cp .env.example .env
 # 필요시 .env 파일 편집
 
-# 5. 최적화된 시스템 실행 🚀
+# 5. 최적화된 시스템 실행 🚀 (v3.0 최신 설정)
 docker build --target development -t kitech-dev .
 docker run -d -p 8000:8000 \
   -e "OLLAMA_API_URL=http://host.docker.internal:11434/api/generate" \
   -e "PRELOAD_EMBEDDING_MODEL=false" \
+  -e "ENABLE_EXTERNAL_ACCESS=true" \
+  -e "CORS_ORIGINS=*" \
+  -v kitech_uploads:/app/uploads \
+  -v kitech_vector_db:/app/vector_db_data \
   --name kitech-app kitech-dev
 
 # 6. 실시간 로그 확인
@@ -241,7 +245,9 @@ docker logs -f kitech-app
 # http://localhost:8000
 ```
 
-> **⚡ v3.0 최적화**: 임베딩 모델 사전 로딩 비활성화로 **5초 내 빠른 시작** 보장
+> **⚡ v3.0 최적화**: 임베딩 모델 사전 로딩 비활성화로 **5초 내 빠른 시작** 보장  
+> **🌐 외부 접속**: CORS_ORIGINS=* 및 외부 접속 허용으로 모든 IP에서 접근 가능  
+> **💾 데이터 영속성**: 명명된 볼륨으로 업로드 파일 및 벡터 DB 데이터 보존
 
 ### 🛠️ **상세 로컬 설치 (개발용)**
 
@@ -299,12 +305,14 @@ cp .env.example .env
 # v3.0 권장 설정
 nano .env
 
-# 예시 설정:
+# v3.0 권장 설정:
 SECRET_KEY="your-super-secret-key-generate-new-one"
 OLLAMA_API_URL="http://localhost:11434/api/generate"
 OLLAMA_DEFAULT_MODEL="qwen3:30b-a3b"
+CORS_ORIGINS="*"
 ENABLE_EXTERNAL_ACCESS=true
 ENABLE_WEB_SEARCH=true
+PRELOAD_EMBEDDING_MODEL=false
 DEBUG=true
 ```
 
@@ -392,8 +400,10 @@ curl http://localhost:8000/api/ollama/status
 |--------|--------|------|
 | `OLLAMA_DEFAULT_MODEL` | qwen3:30b-a3b | v3.0 기본 LLM 모델 |
 | `OCR_LLM_MODEL` | qwen2.5:3b | 경량 OCR 교정 모델 |
+| `CORS_ORIGINS` | * | CORS 허용 도메인 (모든 도메인 허용) |
 | `ENABLE_EXTERNAL_ACCESS` | true | 외부 인터넷 접속 허용 |
 | `ENABLE_WEB_SEARCH` | true | 웹 검색 기능 활성화 |
+| `PRELOAD_EMBEDDING_MODEL` | false | 임베딩 모델 사전 로딩 (빠른 시작) |
 | `TOP_K_RESULTS` | 3 | 검색 결과 개수 |
 | `SIMILARITY_THRESHOLD` | 0.9 | 유사도 임계값 |
 
