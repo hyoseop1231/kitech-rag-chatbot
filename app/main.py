@@ -83,9 +83,15 @@ async def startup_event():
     """
     logger.info("Application startup complete - embedding model will load on first request")
 
-# Placeholder for API router (will be added later)
-from app.api import endpoints
-app.include_router(endpoints.router, prefix="/api") # Added prefix for API routes
+# Import the new routers
+from app.api.routers import document, chat, system, model, welcome
+
+# Include the new routers
+app.include_router(document.router, prefix="/api", tags=["Document Management"])
+app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
+app.include_router(system.router, prefix="/api/system", tags=["System & Monitoring"])
+app.include_router(model.router, prefix="/api/models", tags=["AI Models"])
+app.include_router(welcome.router, prefix="/api/welcome", tags=["Welcome Messages"])
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
