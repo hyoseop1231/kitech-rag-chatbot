@@ -1,0 +1,64 @@
+{
+    "summaries": {
+        "seokdong-llama-3.1-8b": {
+            "display_name": "SEOKDONG-Llama 3.1 (8B)",
+            "provider": "Kwangsuklee · Meta 기반",
+            "params": "8 B (Q5_K_M 양자화 ≈ 5.7 GB)",
+            "key_points": "한국어 특화 SFT, 128 K 컨텍스트, 2025년 韓 LLM 리더보드 6위"
+        },
+        "sfr-embedding-mistral-7b": {
+            "display_name": "SFR-Embedding (Mistral-7B)",
+            "provider": "Salesforce Research",
+            "params": "7 B",
+            "key_points": "E5-Mistral-7B 기반 임베딩 전용 모델, MTEB 상위권 성능"
+        },
+        "llama-3.1-8b": {
+            "display_name": "Llama 3.1 (8B)",
+            "provider": "Meta",
+            "params": "8 B",
+            "key_points": "다국어 지원, 128 K 컨텍스트, 범용 베이스 모델"
+        },
+        "qwen-3-235b-a22b": {
+            "display_name": "Qwen 3 235B-A22B",
+            "provider": "Alibaba Cloud",
+            "params": "235 B 총 (활성 22 B MoE)",
+            "key_points": "94-레이어 MoE·GQA 구조, 32 K→131 K 컨텍스트 확장, 고난도 추론·코딩 강점"
+        },
+        "llama-3.2-3b-instruct": {
+            "display_name": "Llama 3.2 (3B Instruct)",
+            "provider": "Meta",
+            "params": "3.2 B (Q5_K_M)",
+            "key_points": "소형 멀티링궐 지시응답 특화, 1 B/3 B 버전, 요약·툴사용 튜닝"
+        },
+        "qwen-3-32b": {
+            "display_name": "Qwen 3 32B",
+            "provider": "Alibaba Cloud",
+            "params": "32.8 B",
+            "key_points": "'Thinking ↔ Non-Thinking' 하이브리드 모드, 128 K 컨텍스트, 에이전트·추론 강화"
+        },
+        "gemma-3-27b-qat": {
+            "display_name": "Gemma 3 27B-QAT",
+            "provider": "Google",
+            "params": "27.4 B",
+            "key_points": "멀티모달(텍스트+이미지), 128 K 컨텍스트, QAT 덕분에 단일 GPU 구동"
+        },
+        "deepseek-r1-distill-32b": {
+            "display_name": "DeepSeek-R1 Distill 32B",
+            "provider": "DeepSeek",
+            "params": "32 B",
+            "key_points": "RL-기반 Reasoning R1 모델을 소형화, 32 K 컨텍스트, o1-mini급 성능"
+        },
+        "qwq-32b": {
+            "display_name": "QwQ 32B",
+            "provider": "Alibaba Cloud",
+            "params": "32.5 B",
+            "key_points": "강화학습 Reasoning 특화, 131 K 컨텍스트, DeepSeek-R1과 경쟁"
+        }
+    },
+    "tips": [
+        "추론·코딩 문제 해결 → Qwen 3 235B, Qwen 3 32B, QwQ 32B, DeepSeek-R1 Distill 32B.",
+        "한국어 질의응답 → SEOKDONG-Llama 3.1 (8B).",
+        "RAG·검색 임베딩 → SFR-Embedding (Mistral-7B).",
+        "리소스 제약 환경 → Llama 3.2 (3B Instruct), Gemma 3 27B-QAT (단일 GPU 가능)."
+    ]
+}

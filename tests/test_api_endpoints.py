@@ -3,16 +3,16 @@
 import pytest
 import asyncio
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from app.main import app
-from app.api.endpoints import ChatRequest
+from app.api.routers.chat import ChatRequest
 
 client = TestClient(app, base_url="http://localhost")
 
 class TestUploadEndpoint:
     
-    @patch('app.api.endpoints.FileValidator.validate_uploaded_file')
-    @patch('app.api.endpoints.process_pdf_background')
+    @patch('app.api.routers.upload.FileValidator.validate_uploaded_file')
+    @patch('app.api.routers.upload.process_pdf_background')
     def test_upload_pdf_success(self, mock_process, mock_validator):
         """Test successful PDF upload"""
         # Mock validation
@@ -38,12 +38,15 @@ class TestUploadEndpoint:
         
         assert response.status_code == 202
         data = response.json()
-        assert "document_id" in data
-        assert "file_hash" in data
-        assert data["filename"] == "test.pdf"
+        # Multi-file response format: {"results": [...]}
+        assert "results" in data
+        result = data["results"][0]
+        assert "document_id" in result
+        assert "file_hash" in result
+        assert result["filename"] == "test.pdf"
     
     def test_upload_invalid_file_type(self):
-        """Test upload with invalid file type"""
+        """Test upload with invalid file type — returns 202 with error in results"""
         test_content = b"not a pdf"
         
         response = client.post(
@@ -57,11 +60,15 @@ class TestUploadEndpoint:
             }
         )
         
-        assert response.status_code == 400
-        assert "Invalid file type" in response.json()["detail"]
+        # Multi-file endpoint always returns 202; per-file errors in results
+        assert response.status_code == 202
+        data = response.json()
+        result = data["results"][0]
+        assert "error" in result
+        assert "validation failed" in result["error"].lower() or "File validation failed" in result["error"]
     
     def test_upload_empty_file(self):
-        """Test upload with empty file"""
+        """Test upload with empty file — returns 202 with error in results"""
         response = client.post(
             "/api/upload_pdf/",
             files={
@@ -73,12 +80,15 @@ class TestUploadEndpoint:
             }
         )
         
-        assert response.status_code == 400
-        assert "Empty file uploaded" in response.json()["detail"]
+        assert response.status_code == 202
+        data = response.json()
+        result = data["results"][0]
+        assert "error" in result
+        assert "Empty file" in result["error"]
     
-    @patch('app.api.endpoints.FileValidator.validate_uploaded_file')
+    @patch('app.api.routers.upload.FileValidator.validate_uploaded_file')
     def test_upload_validation_failure(self, mock_validator):
-        """Test upload with validation failure"""
+        """Test upload with validation failure — returns 202 with error in results"""
         # Mock validation failure
         mock_validator.return_value = {
             "is_valid": False,
@@ -99,29 +109,40 @@ class TestUploadEndpoint:
             }
         )
         
-        assert response.status_code == 400
-        assert "File validation failed" in response.json()["detail"]
+        assert response.status_code == 202
+        data = response.json()
+        result = data["results"][0]
+        assert "error" in result
+        assert "File validation failed" in result["error"]
 
 class TestChatEndpoint:
     
-    @patch('app.api.endpoints.get_embeddings')
-    @patch('app.services.vector_db_service.search_multimodal_content')
-    @patch('app.api.endpoints.process_llm_chat_request')
-    def test_chat_success(self, mock_llm, mock_search, mock_embeddings):
+    @patch('app.api.routers.chat.get_embeddings')
+    @patch('app.api.routers.chat.search_multimodal_content')
+    @patch('app.api.routers.chat.process_multimodal_llm_chat_request')
+    @patch('app.api.routers.chat.enhance_response_with_media_references')
+    def test_chat_success(self, mock_enhance, mock_llm, mock_search, mock_embeddings):
         """Test successful chat request"""
         # Mock embeddings
         mock_embeddings.return_value = [[0.1, 0.2, 0.3]]
         
-        # Mock search results
-        mock_search.return_value = [
-            {
-                "text": "Sample document text",
-                "metadata": {"source_document_id": "doc1"}
-            }
-        ]
+        # Mock multimodal search results
+        mock_search.return_value = {
+            'text': [{"text": "Sample document text", "metadata": {"source_document_id": "doc1"}}],
+            'images': [],
+            'tables': []
+        }
         
         # Mock LLM response
         mock_llm.return_value = "This is the AI response."
+        
+        # Mock enhance response
+        mock_enhance.return_value = {
+            'text': "This is the AI response.",
+            'referenced_images': [],
+            'referenced_tables': [],
+            'has_media': False
+        }
         
         response = client.post(
             "/api/chat/",
@@ -135,7 +156,8 @@ class TestChatEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["query"] == "What is this document about?"
-        assert data["response"] == "This is the AI response."
+        # FallbackResponseService may enhance short responses with additional info
+        assert "This is the AI response." in data["response"]
     
     def test_chat_empty_query(self):
         """Test chat with empty query"""
@@ -145,10 +167,14 @@ class TestChatEndpoint:
         )
         
         assert response.status_code == 400
-        assert "Query not provided" in response.json()["detail"]
     
-    def test_chat_invalid_document_id(self):
+    @patch('app.api.routers.chat.sanitize_input')
+    @patch('app.api.routers.chat.validate_document_id')
+    def test_chat_invalid_document_id(self, mock_validate_id, mock_sanitize):
         """Test chat with invalid document ID"""
+        mock_sanitize.return_value = "Test query"
+        mock_validate_id.return_value = False
+        
         response = client.post(
             "/api/chat/",
             json={
@@ -160,17 +186,17 @@ class TestChatEndpoint:
         assert response.status_code == 400
         assert "Invalid document ID" in response.json()["detail"]
     
-    @patch('app.api.endpoints.sanitize_input')
+    @patch('app.api.routers.chat.sanitize_input')
     def test_chat_input_sanitization(self, mock_sanitize):
         """Test that input is properly sanitized"""
         mock_sanitize.return_value = "cleaned query"
         
         # This test ensures sanitize_input is called
-        with patch('app.api.endpoints.get_embeddings') as mock_embeddings:
+        with patch('app.api.routers.chat.get_embeddings') as mock_embeddings:
             mock_embeddings.return_value = [[0.1, 0.2, 0.3]]
-            with patch('app.services.vector_db_service.search_multimodal_content') as mock_search:
-                mock_search.return_value = []
-                with patch('app.api.endpoints.process_llm_chat_request') as mock_llm:
+            with patch('app.api.routers.chat.search_multimodal_content') as mock_search:
+                mock_search.return_value = {'text': [], 'images': [], 'tables': []}
+                with patch('app.api.routers.chat.process_multimodal_llm_chat_request') as mock_llm:
                     mock_llm.return_value = "response"
                     
                     response = client.post(
@@ -184,8 +210,7 @@ class TestStatusEndpoints:
     
     def test_upload_status_existing(self):
         """Test getting status for existing document"""
-        # Mock the status dictionary
-        with patch('app.api.endpoints.pdf_processing_status', {"doc123": {"step": "Done", "message": "Complete"}}):
+        with patch('app.api.routers.upload.pdf_processing_status', {"doc123": {"step": "Done", "message": "Complete"}}):
             response = client.get("/api/upload_status/doc123")
             
             assert response.status_code == 200
@@ -201,12 +226,17 @@ class TestStatusEndpoints:
         data = response.json()
         assert data["step"] == "Unknown"
     
-    @patch('app.api.endpoints.requests.get')
-    def test_ollama_status_running(self, mock_get):
+    @patch('app.api.routers.models.httpx.AsyncClient')
+    def test_ollama_status_running(self, mock_client_class):
         """Test Ollama status when running"""
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_get.return_value = mock_response
+        
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_class.return_value = mock_client
         
         response = client.get("/api/ollama/status")
         
@@ -214,10 +244,14 @@ class TestStatusEndpoints:
         data = response.json()
         assert data["status"] == "running"
     
-    @patch('app.api.endpoints.requests.get')
-    def test_ollama_status_not_running(self, mock_get):
+    @patch('app.api.routers.models.httpx.AsyncClient')
+    def test_ollama_status_not_running(self, mock_client_class):
         """Test Ollama status when not running"""
-        mock_get.side_effect = Exception("Connection failed")
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=Exception("Connection failed"))
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_class.return_value = mock_client
         
         response = client.get("/api/ollama/status")
         

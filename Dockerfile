@@ -130,8 +130,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr-kor \
     tesseract-ocr-eng \
     # Runtime libraries for ML/CV (without dev packages)\
-    libgl1-mesa-glx \
-    libglib2.0-0 \
+    libgl1 \
+    libglib2.0-0t64 \
     libsm6 \
     libxext6 \
     libxrender1 \
@@ -139,19 +139,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgfortran5 \
     # Image processing runtime libraries\
     libjpeg62-turbo \
-    libpng16-16 \
+    libpng16-16t64 \
     libtiff6 \
     libwebp7 \
-    # OpenCV runtime libraries\
-    libopencv-core406 \
-    libopencv-imgproc406 \
-    libopencv-imgcodecs406 \
+    # OpenCV is installed via pip; no system packages needed\
     # System utilities\
     procps \
     htop \
     # File type detection\
     file \
-    libmagic1 \
+    libmagic1t64 \
     # Cleanup\
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
@@ -288,15 +285,15 @@ CMD ["sh", "-c", "gunicorn app.main:app \
 
 # Environment variable documentation
 ENV DOCS_ENV_VARS="\
-DEBUG=false|true - Enable debug mode \n\
-SECRET_KEY=<secret> - Application secret key \n\
-OLLAMA_API_URL=<url> - Ollama API endpoint \n\
-OLLAMA_DEFAULT_MODEL=<model> - Default LLM model \n\
-MAX_FILE_SIZE=<size> - Maximum upload file size in MB \n\
-OCR_LANGUAGES=<langs> - OCR language settings \n\
-LOG_LEVEL=INFO|DEBUG|WARNING|ERROR - Logging level \n\
-WORKERS=<number> - Number of Gunicorn workers \n\
-CORS_ORIGINS=<origins> - Allowed CORS origins"
+    DEBUG=false|true - Enable debug mode \n\
+    SECRET_KEY=<secret> - Application secret key \n\
+    OLLAMA_API_URL=<url> - Ollama API endpoint \n\
+    OLLAMA_DEFAULT_MODEL=<model> - Default LLM model \n\
+    MAX_FILE_SIZE=<size> - Maximum upload file size in MB \n\
+    OCR_LANGUAGES=<langs> - OCR language settings \n\
+    LOG_LEVEL=INFO|DEBUG|WARNING|ERROR - Logging level \n\
+    WORKERS=<number> - Number of Gunicorn workers \n\
+    CORS_ORIGINS=<origins> - Allowed CORS origins"
 
 # Build information
 ARG BUILD_DATE
@@ -304,11 +301,11 @@ ARG VERSION
 ARG VCS_REF
 
 LABEL org.opencontainers.image.created=$BUILD_DATE \
-      org.opencontainers.image.version=$VERSION \
-      org.opencontainers.image.revision=$VCS_REF \
-      org.opencontainers.image.title="KITECH RAG Chatbot" \
-      org.opencontainers.image.description="AI-powered foundry technology expert assistant" \
-      org.opencontainers.image.authors="KITECH AI Team" \
-      org.opencontainers.image.vendor="Korea Institute of Industrial Technology" \
-      org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.documentation="https://github.com/KITECH-AI/rag-chatbot/README.md"
+    org.opencontainers.image.version=$VERSION \
+    org.opencontainers.image.revision=$VCS_REF \
+    org.opencontainers.image.title="KITECH RAG Chatbot" \
+    org.opencontainers.image.description="AI-powered foundry technology expert assistant" \
+    org.opencontainers.image.authors="KITECH AI Team" \
+    org.opencontainers.image.vendor="Korea Institute of Industrial Technology" \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.documentation="https://github.com/KITECH-AI/rag-chatbot/README.md"

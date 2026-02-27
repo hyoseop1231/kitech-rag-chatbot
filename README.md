@@ -17,7 +17,7 @@
 - **🧠 실시간 THINK 블록**: AI 추론 과정을 접기/펴기 가능한 형태로 시각화
 - **📚 3단계 참고문헌 시스템**: 중요도 기반 정렬, 클릭 가능한 아코디언 형태
 - **🌊 고급 스트리밍**: Server-Sent Events로 끊김 없는 실시간 답변 생성
-- **🇰🇷 한국어 최적화**: qwen3:30b-a3b 모델로 한국어 성능 극대화
+- **🇰🇷 한국어 최적화**: OpenRouter (Gemini 2.0 Flash) 기본 + Ollama 폴백 지원
 - **🌐 외부 접속 허용**: 인터넷 검색 및 외부 API 접근 기본 지원
 - **🎯 정교한 HTML 렌더링**: 마크다운, 표, 코드 블록 완벽 지원
 
@@ -153,7 +153,7 @@ graph TD
 | **🔗 API 게이트웨이** | FastAPI Router | REST API, SSE, 인증, 라우팅 | FastAPI, Starlette, Pydantic |
 | **🧠 비즈니스 로직** | Core Services | 문서처리, AI추론, 스트리밍 | Python, AsyncIO |
 | **💾 데이터 계층** | Vector Database | 임베딩 저장, 유사도 검색 | ChromaDB, SQLite |
-| **🔧 외부 서비스** | AI & OCR | LLM 추론, 텍스트 인식 | Ollama, Tesseract |
+| **🔧 외부 서비스** | AI & OCR | LLM 추론, 텍스트 인식 | OpenRouter/Ollama, Tesseract |
 
 ### 📂 **프로젝트 구조**
 
@@ -161,7 +161,13 @@ graph TD
 🏢 KITECH-RAG-System-v3/
 ├── 📦 app/                         # 코어 애플리케이션
 │   ├── 📛 api/                     # API 계층
-│   │   └── endpoints.py          # 통합 REST API 엔드포인트 (19개)
+│   │   └── routers/              # 모듈화된 API 라우터
+│   │       ├── upload.py         # PDF 업로드 & 백그라운드 처리
+│   │       ├── chat.py           # 채팅 (일반 + 스트리밍)
+│   │       ├── documents.py      # 문서 CRUD
+│   │       ├── models.py         # Ollama 모델 관리 (비동기)
+│   │       ├── welcome.py        # 환영 메시지
+│   │       └── system.py         # 헬스체크, 메트릭, 저장소 통계
 │   ├── ⚙️ services/                # 비즈니스 로직 계층
 │   │   ├── llm_service.py        # LLM 통신 & 프롬프트 엔지니어링
 │   │   ├── multimodal_llm_service.py  # 멀티모달 AI 추론 엔진
@@ -179,6 +185,7 @@ graph TD
 │   ├── 📀 data/                   # 데이터 자원
 │   │   ├── foundry_terminology.json   # 주조기술 전문용어
 │   │   ├── model_info_cache.json      # 모델 정보 캐시
+│   │   ├── model_catalog.json         # 모델 요약 및 팁
 │   │   └── welcome_messages.json      # 동적 환영 메시지
 │   ├── ⚙️ config.py                # 포괄적 설정 관리 (73개 옵션)
 │   └── 🚀 main.py                  # FastAPI 애플리케이션 엔트리포인트
@@ -194,6 +201,7 @@ graph TD
 │
 └── 🔧 설정 및 스크립트
     ├── requirements.txt          # 프로덕션 의존성
+    ├── requirements-dev.txt      # 개발/테스트 의존성
     ├── .env.example              # 환경 변수 템플릿
     └── .gitignore                # Git 무시 리스트
 ```
@@ -207,7 +215,7 @@ graph TD
 | **🐍 Python** | 3.11+ | 3.13+ | 비동기 I/O 지원 |
 | **💻 RAM** | 8GB | 16GB+ | 대용량 문서 처리시 |
 | **💾 디스크** | 20GB | 50GB+ | 모델 캐시 및 데이터 |
-| **🤖 Ollama** | 8GB+ | qwen3:30b-a3b 모델 | v3.0 기본 모델 |
+| **🤖 LLM** | - | OpenRouter API (기본) | Ollama 폴백 지원 |
 | **🔧 GPU** | 선택적 | CUDA/MPS | 성능 가속화 |
 
 ### 🚀 **1분 내 빠른 설치 (Docker)** ⭐ **최적화 완료**
@@ -307,8 +315,9 @@ nano .env
 
 # v3.0 권장 설정:
 SECRET_KEY="your-super-secret-key-generate-new-one"
-OLLAMA_API_URL="http://localhost:11434/api/generate"
-OLLAMA_DEFAULT_MODEL="qwen3:30b-a3b"
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY="your-openrouter-api-key"
+OPENROUTER_DEFAULT_MODEL="google/gemini-2.0-flash-001"
 CORS_ORIGINS="*"
 ENABLE_EXTERNAL_ACCESS=true
 ENABLE_WEB_SEARCH=true
@@ -351,7 +360,7 @@ curl http://localhost:8000/api/ollama/status
 ### 2. 🤖 AI 채팅 및 대화
 
 1. **질문 입력**: 하단 채팅창에 질문 입력
-2. **모델 선택**: 상단에서 사용할 AI 모델 선택 (기본: qwen3:30b-a3b)
+2. **모델 선택**: 상단에서 사용할 AI 모델 선택 (기본: OpenRouter/Gemini 2.0 Flash)
 3. **실시간 답변 확인**:
    - 🧠 **THINK 블록**: AI 추론 과정 실시간 시각화 (클릭하여 접기/펴기)
    - 🌊 **스트리밍 답변**: 답변 생성과 동시에 즉시 표시

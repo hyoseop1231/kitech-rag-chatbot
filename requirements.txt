@@ -15,9 +15,10 @@ starlette>=0.46.0,<0.47.0           # Core ASGI framework
 # ===================================================================
 # HTTP CLIENT & NETWORKING
 # ===================================================================
-requests>=2.32.0,<3.0.0             # Synchronous HTTP client
-httpx>=0.28.0,<0.29.0               # Async HTTP client for better performance
-aiofiles>=24.1.0,<25.0.0            # Async file operations
+requests>=2.32.0,<3.0.0
+httpx>=0.28.0,<0.29.0
+aiofiles>=24.1.0,<25.0.0
+openai>=1.0.0,<2.0.0
 
 # ===================================================================
 # STREAMING & REAL-TIME COMMUNICATION
@@ -93,24 +94,6 @@ sentry-sdk[fastapi]>=2.30.0,<3.0.0  # Error tracking and monitoring (optional)
 gunicorn>=23.0.0,<24.0.0            # Production WSGI server
 uvloop>=0.21.0,<0.22.0              # High-performance event loop (Unix only)
 
-# ===================================================================
-# DEVELOPMENT & TESTING
-# ===================================================================
-# Testing Framework
-pytest>=8.4.0,<9.0.0                # Testing framework
-pytest-asyncio>=1.0.0,<2.0.0        # Async testing support
-pytest-cov>=6.2.0,<7.0.0            # Code coverage reporting
-pytest-mock>=3.14.0,<4.0.0          # Mock testing utilities
-
-# Development Tools
-black>=24.10.0,<25.0.0              # Code formatting
-ruff>=0.8.0,<0.9.0                  # Fast Python linter
-mypy>=1.13.0,<2.0.0                 # Static type checking
-pre-commit>=4.0.0,<5.0.0            # Git pre-commit hooks
-
-# Performance Profiling (Development)
-memory-profiler>=0.61.0,<0.62.0     # Memory usage profiling
-line-profiler>=4.2.0,<5.0.0         # Line-by-line performance profiling
 
 # ===================================================================
 # OPTIONAL DEPENDENCIES FOR ENHANCED FEATURES

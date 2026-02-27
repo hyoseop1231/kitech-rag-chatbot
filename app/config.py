@@ -4,94 +4,142 @@ from typing import Optional
 from pathlib import Path
 
 load_dotenv()
+
+
 class Settings:
     """Application settings with environment variable support"""
-    
+
     # Server settings
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
-    
+
     # File handling
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "uploads")
-    MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "100")) * 1024 * 1024  # 100MB default
+    MAX_FILE_SIZE: int = (
+        int(os.getenv("MAX_FILE_SIZE", "100")) * 1024 * 1024
+    )  # 100MB default
     ALLOWED_EXTENSIONS: list = os.getenv("ALLOWED_EXTENSIONS", ".pdf").split(",")
-    
+
     # Vector DB settings
     CHROMA_DATA_PATH: str = os.getenv("CHROMA_DATA_PATH", "vector_db_data")
     COLLECTION_NAME: str = os.getenv("COLLECTION_NAME", "pdf_documents_collection")
-    
+
     # Text processing settings
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "1000"))
     CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "150"))
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "jhgan/ko-sroberta-multitask")
-    
-    # Ollama LLM settings
-    OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/generate")
+
+    # LLM Provider settings
+    LLM_PROVIDER: str = os.getenv(
+        "LLM_PROVIDER", "openrouter"
+    )  # "ollama" or "openrouter"
+
+    # OpenRouter settings
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_API_URL: str = os.getenv(
+        "OPENROUTER_API_URL", "https://openrouter.ai/api/v1"
+    )
+    OPENROUTER_DEFAULT_MODEL: str = os.getenv(
+        "OPENROUTER_DEFAULT_MODEL", "google/gemini-2.0-flash-001"
+    )
+    OPENROUTER_TIMEOUT: int = int(os.getenv("OPENROUTER_TIMEOUT", "120"))
+
+    # Ollama LLM settings (legacy/fallback)
+    OLLAMA_API_URL: str = os.getenv(
+        "OLLAMA_API_URL", "http://localhost:11434/api/generate"
+    )
     OLLAMA_DEFAULT_MODEL: str = os.getenv("OLLAMA_DEFAULT_MODEL", "qwen3:30b-a3b")
     OLLAMA_TIMEOUT: int = int(os.getenv("OLLAMA_TIMEOUT", "120"))
+
+    # Common LLM settings
     LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.5"))
     LLM_NUM_PREDICT_TEXT: int = int(os.getenv("LLM_NUM_PREDICT_TEXT", "2048"))
-    LLM_NUM_PREDICT_MULTIMODAL: int = int(os.getenv("LLM_NUM_PREDICT_MULTIMODAL", "3072"))
-    
+    LLM_NUM_PREDICT_MULTIMODAL: int = int(
+        os.getenv("LLM_NUM_PREDICT_MULTIMODAL", "3072")
+    )
+
     # OCR correction specific LLM settings (경량 모델 사용)
-    OCR_LLM_MODEL: str = os.getenv("OCR_LLM_MODEL", "qwen2.5:3b")  # 경량 모델
+    OCR_LLM_MODEL: str = os.getenv(
+        "OCR_LLM_MODEL", "google/gemini-2.0-flash-001"
+    )  # OpenRouter 모델
     OCR_LLM_TIMEOUT: int = int(os.getenv("OCR_LLM_TIMEOUT", "60"))  # 짧은 타임아웃
-    OCR_LLM_TEMPERATURE: float = float(os.getenv("OCR_LLM_TEMPERATURE", "0.3"))  # 낮은 창의성
-    OCR_LLM_NUM_PREDICT: int = int(os.getenv("OCR_LLM_NUM_PREDICT", "1024"))  # 짧은 응답
-    
+    OCR_LLM_TEMPERATURE: float = float(
+        os.getenv("OCR_LLM_TEMPERATURE", "0.3")
+    )  # 낮은 창의성
+    OCR_LLM_NUM_PREDICT: int = int(
+        os.getenv("OCR_LLM_NUM_PREDICT", "1024")
+    )  # 짧은 응답
+
     # OCR settings
     TESSERACT_CMD: Optional[str] = os.getenv("TESSERACT_CMD")
     OCR_LANGUAGES: str = os.getenv("OCR_LANGUAGES", "kor+eng")
     OCR_DPI: int = int(os.getenv("OCR_DPI", "300"))
-    OCR_CORRECTION_ENABLED: bool = os.getenv("OCR_CORRECTION_ENABLED", "True").lower() == "true"
-    OCR_CORRECTION_USE_LLM: bool = os.getenv("OCR_CORRECTION_USE_LLM", "True").lower() == "true"
-    
+    OCR_CORRECTION_ENABLED: bool = (
+        os.getenv("OCR_CORRECTION_ENABLED", "True").lower() == "true"
+    )
+    OCR_CORRECTION_USE_LLM: bool = (
+        os.getenv("OCR_CORRECTION_USE_LLM", "True").lower() == "true"
+    )
+
     # Search settings
     TOP_K_RESULTS: int = int(os.getenv("TOP_K_RESULTS", "3"))
     # Similarity threshold for relevance filtering (distance values)
-    SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.9"))  # Higher = more strict
-    
-    
+    SIMILARITY_THRESHOLD: float = float(
+        os.getenv("SIMILARITY_THRESHOLD", "0.9")
+    )  # Higher = more strict
+
     # Streaming settings
     ENABLE_STREAMING: bool = os.getenv("ENABLE_STREAMING", "True").lower() == "true"
-    
+
     # External access settings
-    ENABLE_EXTERNAL_ACCESS: bool = os.getenv("ENABLE_EXTERNAL_ACCESS", "True").lower() == "true"
+    ENABLE_EXTERNAL_ACCESS: bool = (
+        os.getenv("ENABLE_EXTERNAL_ACCESS", "True").lower() == "true"
+    )
     ENABLE_WEB_SEARCH: bool = os.getenv("ENABLE_WEB_SEARCH", "True").lower() == "true"
-    
+
     # Performance optimization settings
     OCR_MAX_WORKERS: int = int(os.getenv("OCR_MAX_WORKERS", "8"))
     OCR_BATCH_SIZE: int = int(os.getenv("OCR_BATCH_SIZE", "4"))
     EMBEDDING_BATCH_SIZE: int = int(os.getenv("EMBEDDING_BATCH_SIZE", "32"))
-    ENABLE_PARALLEL_SEARCH: bool = os.getenv("ENABLE_PARALLEL_SEARCH", "True").lower() == "true"
+    ENABLE_PARALLEL_SEARCH: bool = (
+        os.getenv("ENABLE_PARALLEL_SEARCH", "True").lower() == "true"
+    )
     ENABLE_ASYNC_LLM: bool = os.getenv("ENABLE_ASYNC_LLM", "True").lower() == "true"
-    CONTEXT_COMPRESSION_MAX_TOKENS: int = int(os.getenv("CONTEXT_COMPRESSION_MAX_TOKENS", "2000"))
-    
+    CONTEXT_COMPRESSION_MAX_TOKENS: int = int(
+        os.getenv("CONTEXT_COMPRESSION_MAX_TOKENS", "2000")
+    )
+
     # File processing limits
-    MAX_CONCURRENT_FILE_PROCESSING: int = int(os.getenv("MAX_CONCURRENT_FILE_PROCESSING", "5"))
+    MAX_CONCURRENT_FILE_PROCESSING: int = int(
+        os.getenv("MAX_CONCURRENT_FILE_PROCESSING", "5")
+    )
     MAX_FILES_PER_UPLOAD: int = int(os.getenv("MAX_FILES_PER_UPLOAD", "10"))
-    
+
     # Security settings
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     CORS_ORIGINS: list = os.getenv("CORS_ORIGINS", "http://localhost:8000").split(",")
-    ALLOWED_HOSTS: list = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,*").split(",")
-    
+    ALLOWED_HOSTS: list = os.getenv(
+        "ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,*"
+    ).split(",")
+
     # Logging settings
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: str = os.getenv("LOG_FILE", "app.log")
-    
+
     def __init__(self):
         # Create necessary directories
         Path(self.UPLOAD_DIR).mkdir(exist_ok=True)
         Path(self.CHROMA_DATA_PATH).mkdir(exist_ok=True)
-        
+
         # Set Tesseract path if provided
         if self.TESSERACT_CMD:
             import pytesseract
+
             pytesseract.pytesseract.tesseract_cmd = self.TESSERACT_CMD
         # Warn if SECRET_KEY is default
         import logging
+
         if self.SECRET_KEY == "your-secret-key-change-in-production":
             if not self.DEBUG:
                 # In production, this should be an error, not just a warning
@@ -103,6 +151,7 @@ class Settings:
                 logging.getLogger(__name__).warning(
                     "SECRET_KEY is using default value; please set SECRET_KEY in environment for production"
                 )
+
 
 # Global settings instance
 settings = Settings()

@@ -6,6 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     container_name: kitech-chatbot
     ports:
       - "8000:8000"
@@ -13,57 +14,65 @@ services:
       # Basic Configuration
       - HOST=0.0.0.0
       - PORT=8000
-      - DEBUG=false
-      
+      - DEBUG=true
+
       # Security Settings
       - SECRET_KEY=${SECRET_KEY:-change-this-in-production}
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
       - ENABLE_EXTERNAL_ACCESS=${ENABLE_EXTERNAL_ACCESS:-true}
       - CHROMA_ANONYMIZED_TELEMETRY=True
-      
+
+      # LLM Provider Settings
+      - LLM_PROVIDER=${LLM_PROVIDER:-openrouter}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_API_URL=${OPENROUTER_API_URL:-https://openrouter.ai/api/v1}
+      - OPENROUTER_DEFAULT_MODEL=${OPENROUTER_DEFAULT_MODEL:-google/gemini-2.0-flash-001}
+      - OPENROUTER_TIMEOUT=${OPENROUTER_TIMEOUT:-120}
+
+      # Ollama Settings (fallback)
+      - OLLAMA_API_URL=${OLLAMA_API_URL:-http://192.168.0.106:11434/api/generate}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-gpt-oss:20b}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.5}
+      - LLM_NUM_PREDICT_MULTIMODAL=${LLM_NUM_PREDICT_MULTIMODAL:-3072}
+
       # File Processing
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-200}
       - ALLOWED_EXTENSIONS=${ALLOWED_EXTENSIONS:-.pdf}
-      
+
       # OCR Settings
       - OCR_LANGUAGES=${OCR_LANGUAGES:-kor+eng}
       - OCR_DPI=${OCR_DPI:-300}
       - OCR_CORRECTION_ENABLED=${OCR_CORRECTION_ENABLED:-true}
+      - OCR_LLM_MODEL=${OCR_LLM_MODEL:-google/gemini-2.0-flash-001}
       - OCR_MAX_WORKERS=${OCR_MAX_WORKERS:-4}
-      
-      # LLM Settings
-      - OLLAMA_API_URL=${OLLAMA_API_URL:-http://host.docker.internal:11434/api/generate}
-      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-qwen3:30b-a3b}
-      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.5}
-      - LLM_NUM_PREDICT_MULTIMODAL=${LLM_NUM_PREDICT_MULTIMODAL:-3072}
-      
+
       # Database Settings
       - CHROMA_DATA_PATH=/app/vector_db_data
       - COLLECTION_NAME=${COLLECTION_NAME:-kitech_documents}
-      
+
       # Performance Settings
       - EMBEDDING_BATCH_SIZE=${EMBEDDING_BATCH_SIZE:-32}
       - CHUNK_SIZE=${CHUNK_SIZE:-1000}
       - CHUNK_OVERLAP=${CHUNK_OVERLAP:-150}
-      
-      
+
       # Logging
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      
+
       # Performance Optimization
       - PRELOAD_EMBEDDING_MODEL=${PRELOAD_EMBEDDING_MODEL:-false}
-      
+
     volumes:
+      # Code mount for hot reload
+      - ./app:/app/app:ro
       # Persistent data storage
       - kitech_vector_data:/app/vector_db_data
-      - kitech_uploads:/app/uploads:rw
+      - ./uploads:/app/uploads:rw
       - kitech_logs:/app/logs
-      
       # Optional: Mount custom configuration
       # - ./custom_config:/app/config:ro
-      
+
     restart: unless-stopped
-    
+
     # Resource limits
     deploy:
       resources:
@@ -73,20 +82,18 @@ services:
         reservations:
           memory: 2G
           cpus: '1.0'
-    
+
     # Health check (optimized for faster startup)
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-    
-    
+
     # Network configuration
     networks:
       - kitech-network
-
 
   # Nginx reverse proxy (optional for production)
   nginx:
@@ -151,8 +158,6 @@ services:
 # Named volumes for persistent data
 volumes:
   kitech_vector_data:
-    driver: local
-  kitech_uploads:
     driver: local
   kitech_logs:
     driver: local

@@ -3331,7 +3331,7 @@
             setTimeout(() => {
                 const interval = setInterval(async () => {
                     try {
-                        const res = await fetch(`/api/upload_status/${documentId}`);
+                        const res = await fetch(`/api/upload_status/${encodeURIComponent(documentId)}`);
                         const data = await res.json();
                         
                         // 문서를 찾을 수 없는 경우 재시도 처리
@@ -4067,7 +4067,7 @@
             if(progressInterval) clearInterval(progressInterval);
             progressInterval = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/upload_status/${documentId}`);
+                    const res = await fetch(`/api/upload_status/${encodeURIComponent(documentId)}`);
                     const data = await res.json();
                     const stepInfo = progressSteps.find(s => s.step === data.step) || { percent: 0 };
                     progressBarInner.style.width = stepInfo.percent + '%';
@@ -4363,7 +4363,7 @@
             clearManagementStatus();
             
             try {
-                const response = await fetch(`/api/documents/${documentId}`, {
+                const response = await fetch(`/api/documents/${encodeURIComponent(documentId)}`, {
                     method: 'DELETE'
                 });
                 const result = await response.json();
@@ -4550,7 +4550,7 @@
                     for (const fileToDelete of deleteFiles) {
                         try {
                             console.log(`🗑️ 삭제 중: ${fileToDelete.document_id}`);
-                            const deleteResponse = await fetch(`/api/documents/${fileToDelete.document_id}`, {
+                            const deleteResponse = await fetch(`/api/documents/${encodeURIComponent(fileToDelete.document_id)}`, {
                                 method: 'DELETE'
                             });
                             
